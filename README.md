@@ -30,23 +30,23 @@ files in `data/` before running the script.
 
 Here's a paragraph you can drop into the README:
 
-Both `cancer.csv` and `population.csv` should be plain comma-separated files with a header row. 
-`cancer.csv` must contain the following columns:
-`year`: 5-year diagnosis period as a hyphenated range (e.g. `1968-1972`)
-`sex`: (`"F"` for females)
-`agedxgrp`: 5-year age bands in the format `"25-29 Years"`
-`racegrp`: ethnicity represented by the following codes — `CN` (Chinese), `MY` (Malay), `IN` (Indian), and `XX` for any other/unknown group
-`site`: cancer site, noted exactly as `"Breast"` or `"Colon & rectum"`
-`n (incidence count)`: incidence count column named (which R reads in as `n..incidence.count.`) — this column can contain either whole numbers or the string `"<5"` for suppressed low counts
-
-`population.csv` must contain the following columns:
-`year`: single calendar year (not a range)
-`sex`: same `"F"` convention
-`agegrp`: same `"25-29 Years"` format as `agedxgrp` above
-`racegrp`: same race codes
-`population`: the raw population count for that year/age/sex/race combination. 
-
-Age bands and race codes in both files need to match exactly between the two, since the script joins incidence and population data on `period`, `agedxgrp`, `racegrp`, and `sex`.
+Both `cancer.csv` and `population.csv` should be plain comma-separated files with a header row.  
+`cancer.csv` must contain the following columns:  
+`year`: 5-year diagnosis period as a hyphenated range (e.g. `1968-1972`)  
+`sex`: (`"F"` for females)  
+`agedxgrp`: 5-year age bands in the format `"25-29 Years"`  
+`racegrp`: ethnicity represented by the following codes — `CN` (Chinese), `MY` (Malay), `IN` (Indian), and `XX` for any other/unknown group  
+`site`: cancer site, noted exactly as `"Breast"` or `"Colon & rectum"`  
+`n (incidence count)`: incidence count column named (which R reads in as `n..incidence.count.`) — this column can contain either whole numbers or the string `"<5"` for suppressed low counts  
+  
+`population.csv` must contain the following columns:  
+`year`: single calendar year (not a range)  
+`sex`: same `"F"` convention  
+`agegrp`: same `"25-29 Years"` format as `agedxgrp` above  
+`racegrp`: same race codes  
+`population`: the raw population count for that year/age/sex/race combination.   
+  
+Age bands and race codes in both files need to match exactly between the two, since the script joins incidence and population data on `period`, `agedxgrp`, `racegrp`, and `sex`.  
 
 ## Setup
 
