@@ -1,4 +1,4 @@
-# Raw/derived data — often sensitive or too large for git
+# Raw/derived data
 data/
 results/
 
