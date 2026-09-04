@@ -27,10 +27,9 @@ This script expects two input files in `data/`:
 
 Raw data is **not included in this repository** due to data-sharing restrictions. Place your own
 files in `data/` before running the script.
-
-Here's a paragraph you can drop into the README:
-
+  
 Both `cancer.csv` and `population.csv` should be plain comma-separated files with a header row.  
+  
 `cancer.csv` must contain the following columns:  
 `year`: 5-year diagnosis period as a hyphenated range (e.g. `1968-1972`)  
 `sex`: (`"F"` for females)  
