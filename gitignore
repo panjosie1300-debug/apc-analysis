@@ -1,6 +1,9 @@
 # Raw/derived data
-data/
-results/
+data/*
+!data/.gitkeep.txt
+results/*
+!results/.gitkeep.txt
+
 
 # R
 .Rhistory
