@@ -16,7 +16,9 @@ install.packages(packages_to_install)
 
 ## NOTE ON WORKING DIRECTORY:
 ## This script uses relative paths which assumed that the working directory is the 
-## repo's scripts/ folder. Open this .R file in Rstudio and run it from top to bottom.
+## repo's scripts/ folder. Open this .R file in Rstudio and click on somewhere within 
+## the code in the editor to make this the active file before running the script from
+## top to bottom.
 library(rstudioapi)
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 
