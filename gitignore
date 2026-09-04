@@ -1,0 +1,11 @@
+# Raw/derived data — often sensitive or too large for git
+data/
+results/
+
+# R
+.Rhistory
+.RData
+.Rproj.user/
+
+# macOS
+.DS_Store
