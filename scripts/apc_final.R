@@ -1,13 +1,7 @@
-## =============================================================================
-## Age-Period-Cohort (APC) Modelling of Breast and Colorectal Cancer Incidence
-## in Females in Singapore, Stratified by Ethnicity (1968-2023)
-## =============================================================================
-
-## NOTE ON WORKING DIRECTORY:
-## This script uses relative paths which assumed that the working directory is the 
-## repo's scripts/ folder. Open this project as an RStudio Project (.Rproj) at the 
-## repo root with this file's folder ("scripts/") as thegit working directory, or run:
-## setwd(here::here("scripts")) via the 'here' package before running the script
+## ==============================================================================
+## Comparative age–period–cohort analysis reveals divergent temporal trajectories 
+## of breast and colorectal cancer among women in Singapore
+## ==============================================================================
 
 ## -----------------------------------------------------------------------------
 ## 0. SETUP: install/load packages, register fonts
