@@ -6,7 +6,7 @@
 ## NOTE ON WORKING DIRECTORY:
 ## This script uses relative paths which assumed that the working directory is the 
 ## repo's scripts/ folder. Open this project as an RStudio Project (.Rproj) at the 
-## repo root with this file's folder ("scripts/") as the working directory, or run:
+## repo root with this file's folder ("scripts/") as thegit working directory, or run:
 ## setwd(here::here("scripts")) via the 'here' package before running the script
 
 ## -----------------------------------------------------------------------------
@@ -15,10 +15,18 @@
 
 # Install and load packages
 required_packages <- list("dplyr", "splines", "tidyr", "ggplot2", "Epi", "stringr", 
-                          "colorspace", "ggpubr", "showtext", "epitools", "purrr", "viridis")
+                          "colorspace", "ggpubr", "showtext", "epitools", "purrr", "viridis", 
+                          "rstudioapi")
 packages_to_install <- required_packages[!required_packages %in% installed.packages()]
 install.packages(packages_to_install)
 
+## NOTE ON WORKING DIRECTORY:
+## This script uses relative paths which assumed that the working directory is the 
+## repo's scripts/ folder. Open this .R file in Rstudio and run it from top to bottom.
+library(rstudioapi)
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+
+# load other packages
 library(dplyr)
 library(splines)
 library(tidyr)
