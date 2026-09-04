@@ -3,7 +3,11 @@
 ## in Females in Singapore, Stratified by Ethnicity (1968-2023)
 ## =============================================================================
 
-setwd("/Users/josephinepan/Downloads/apc_script_test/scripts")
+## NOTE ON WORKING DIRECTORY:
+## This script uses relative paths which assumed that the working directory is the 
+## repo's scripts/ folder. Open this project as an RStudio Project (.Rproj) at the 
+## repo root with this file's folder ("scripts/") as the working directory, or run:
+## setwd(here::here("scripts")) via the 'here' package before running the script
 
 ## -----------------------------------------------------------------------------
 ## 0. SETUP: install/load packages, register fonts
