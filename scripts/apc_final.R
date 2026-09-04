@@ -39,17 +39,6 @@ library(showtext)
 library(epitools)
 library(purrr)
 
-# Register Calibri (regular/bold/italic/bold-italic) for use in ggplot text via showtext
-font_add(
-  family = "Calibri",
-  regular = "/Applications/Microsoft Word.app/Contents/Resources/DFonts/Calibri.ttf",
-  bold = "/Applications/Microsoft Word.app/Contents/Resources/DFonts/Calibrib.ttf",
-  bolditalic = "/Applications/Microsoft Word.app/Contents/Resources/DFonts/calibriz.ttf",
-  italic = "/Applications/Microsoft Word.app/Contents/Resources/DFonts/Calibrii.ttf"
-)
-
-showtext_auto()
-
 
 ## -----------------------------------------------------------------------------
 ## 1. LOAD AND CLEAN CANCER INCIDENCE DATA
@@ -383,7 +372,7 @@ breast_stand_smooth <- function(df) {
          linetype = "Race",
          fill = "Race") +
     theme_classic() +
-    theme(text = element_text(family = "Calibri", face = "bold"),
+    theme(text = element_text(face = "bold"),
           axis.title.y = element_text(margin = margin(r=5), size = 14),
           axis.title.x = element_text(margin = margin(t=10), size = 14),
           axis.text = element_text(size = 12, colour = "black"),
@@ -413,7 +402,7 @@ colo_stand_smooth <- function(df) {
          linetype = "Race", 
          fill = "Race") +
     theme_classic() +
-    theme(text = element_text(family = "Calibri", face = "bold"),
+    theme(text = element_text(face = "bold"),
           axis.title.y = element_text(margin = margin(r=5), size = 14),
           axis.title.x = element_text(margin = margin(t=10), size = 14),
           axis.text = element_text(size = 12, colour = "black"),
@@ -453,7 +442,7 @@ ggarrange(breast_stand_smooth_1, NULL, colo_stand_smooth_1,
           NULL, NULL, NULL,
           breast_stand_smooth_4, NULL, colo_stand_smooth_4, 
           labels = asr_labels, 
-          font.label = list(family = "Calibri", size = 14, color = "black", face = "bold"),
+          font.label = list(size = 14, color = "black", face = "bold"),
           hjust = 0, widths = c(1,0.1,1), heights = c(1, 0.05, 1, 0.05, 1, 0.05, 1),
           ncol = 3, nrow = 7, common.legend = T)
 
@@ -471,7 +460,7 @@ colo_stand <- colo_stand_smooth_3 + ylim(0,90)
 ggarrange(breast_stand, NULL, colo_stand,
           labels = c("a)", "", "b)"),
           widths = c(1, 0.1, 1),
-          font.label = list(family = "Calibri", size = 14, color = "black", face = "bold"),
+          font.label = list(size = 14, color = "black", face = "bold"),
           ncol = 3, nrow = 1,
           common.legend = T)
 ggsave("../results/ASR_smoothed.pdf", width = 8, height = 4.5)
@@ -561,7 +550,7 @@ age_spec_smooth_colo <- function(df) {
          colour = "Race", linetype = "Race", fill = "Race") +
     theme_classic() +
     scale_x_continuous(breaks = seq(20, 80, by = 10))+
-    theme(text = element_text(family = "Calibri", face = "bold"),
+    theme(text = element_text(face = "bold"),
           axis.title.y = element_text(margin = margin(r=10), size = 14),
           axis.title.x = element_text(margin = margin(t=10), size = 14),
           axis.text = element_text(size = 12, colour = "black"),
@@ -585,7 +574,7 @@ age_spec_smooth_breast <- function(df) {
          colour = "Race", linetype = "Race", fill = "Race") +
     theme_classic() +
     scale_x_continuous(breaks = seq(20, 80, by = 10))+
-    theme(text = element_text(family = "Calibri", face = "bold"),
+    theme(text = element_text(face = "bold"),
           axis.title.y = element_text(margin = margin(r=10), size = 14),
           axis.title.x = element_text(margin = margin(t=10), size = 14),
           axis.text = element_text(size = 12, colour = "black"),
@@ -686,7 +675,7 @@ plot_age_spec_colo <- function(df) {
          colour = "Period midyear", fill = "Period midyear") +
     theme_classic() +
     scale_x_continuous(breaks = seq(20, 80, by = 10))+
-    theme(text = element_text(family = "Calibri", face = "bold"),
+    theme(text = element_text(face = "bold"),
           axis.title.y = element_text(margin = margin(r=10), size = 14),
           axis.title.x = element_text(margin = margin(t=10), size = 14),
           axis.text = element_text(size = 12, colour = "black"),
@@ -710,7 +699,7 @@ plot_age_spec_breast <- function(df) {
          colour = "Period midyear", fill = "Period midyear") +
     theme_classic() +
     scale_x_continuous(breaks = seq(20, 80, by = 10))+
-    theme(text = element_text(family = "Calibri", face = "bold"),
+    theme(text = element_text(face = "bold"),
           axis.title.y = element_text(margin = margin(r=10), size = 14),
           axis.title.x = element_text(margin = margin(t=10), size = 14),
           axis.text = element_text(size = 12, colour = "black"),
@@ -857,9 +846,9 @@ colorectal_age <-  ggplot(colorectal_age_effects, aes(x = value.Age, y = value.R
   facet_wrap(~racegrp) +
   geom_vline(xintercept = menopause_age, linetype = "dashed", colour = "grey30") +
   annotate("text", x = menopause_age - 12, y = 0.011, 
-           label = "< 49 years", family = "Calibri", size = 4) +
+           label = "< 49 years", size = 4) +
   annotate("text", x = menopause_age + 15, y = 0.011, 
-           label = "> 49 years", family = "Calibri", size = 4) +
+           label = "> 49 years", size = 4) +
   labs(title = "Age effect, colorectal", 
        x = "Age (years)", 
        y = "Incidence per 100,000",
@@ -870,7 +859,7 @@ colorectal_age <-  ggplot(colorectal_age_effects, aes(x = value.Age, y = value.R
   scale_colour_manual(values = mycolours) + 
   scale_fill_manual(values = mycolours_light) +
   scale_linetype_manual(values = mylines) +
-  theme(text = element_text(family = "Calibri", face = "bold"),
+  theme(text = element_text(face = "bold"),
         plot.title = element_text(margin = margin(b=10), size = 12),
         axis.title.y = element_text(margin = margin(r=10), size = 12),
         axis.title.x = element_text(margin = margin(t=5), size = 12),
@@ -892,7 +881,7 @@ colorectal_period <- ggplot(colorectal_period_effects, aes(x = value.Per, y = va
   scale_colour_manual(values = mycolours) + 
   scale_fill_manual(values = mycolours_light) +
   scale_linetype_manual(values = mylines) +
-  theme(text = element_text(family = "Calibri", face = "bold"),
+  theme(text = element_text(face = "bold"),
         plot.title = element_text(margin = margin(b=10), size = 12),
         axis.title.y = element_text(margin = margin(r=10), size = 12),
         axis.title.x = element_text(margin = margin(t=5), size = 12),
@@ -920,7 +909,6 @@ colorectal_cohort <- ggplot(colorectal_cohort_effects, aes(x = value.Coh, y = va
     aes(x = label_pos, y = 10, label = label),
     inherit.aes = FALSE,
     angle = 90,
-    family = "Calibri",
     size = 3.5,
     hjust = 0) +
   labs(title = "Cohort effect, colorectal", x = "Birth cohort", y = "Rate ratio") +
@@ -928,7 +916,7 @@ colorectal_cohort <- ggplot(colorectal_cohort_effects, aes(x = value.Coh, y = va
   scale_colour_manual(values = mycolours) + 
   scale_fill_manual(values = mycolours_light) +
   scale_linetype_manual(values = mylines) +
-  theme(text = element_text(family = "Calibri", face = "bold"),
+  theme(text = element_text(face = "bold"),
         plot.title = element_text(margin = margin(b=10), size = 12),
         axis.title.y = element_text(margin = margin(r=10), size = 12),
         axis.title.x = element_text(margin = margin(t=5), size = 12),
@@ -997,9 +985,9 @@ breast_age <-  ggplot(breast_age_effects, aes(x = value.Age, y = value.Rate, col
   facet_wrap(~racegrp) +
   geom_vline(xintercept = menopause_age, linetype = "dashed", colour = "grey30") +
   annotate("text", x = menopause_age - 12, y = 0.0025, 
-           label = "< 49 years", family = "Calibri", size = 4) +
+           label = "< 49 years", size = 4) +
   annotate("text", x = menopause_age + 15, y = 0.0025, 
-           label = "> 49 years", family = "Calibri", size = 4) +
+           label = "> 49 years", size = 4) +
   labs(title = "Age effect, breast", 
        x = "Age (years)", 
        y = "Incidence per 100,000",
@@ -1010,7 +998,7 @@ breast_age <-  ggplot(breast_age_effects, aes(x = value.Age, y = value.Rate, col
   scale_colour_manual(values = mycolours) + 
   scale_fill_manual(values = mycolours_light) +
   scale_linetype_manual(values = mylines) +
-  theme(text = element_text(family = "Calibri", face = "bold"),
+  theme(text = element_text(face = "bold"),
         plot.title = element_text(margin = margin(b=10), size = 12),
         axis.title.y = element_text(margin = margin(r=10), size = 12),
         axis.title.x = element_text(margin = margin(t=5), size = 12),
@@ -1032,7 +1020,7 @@ breast_period <- ggplot(breast_period_effects, aes(x = value.Per, y = value.P.RR
   scale_colour_manual(values = mycolours) + 
   scale_fill_manual(values = mycolours_light) +
   scale_linetype_manual(values = mylines) +
-  theme(text = element_text(family = "Calibri", face = "bold"),
+  theme(text = element_text(face = "bold"),
         plot.title = element_text(margin = margin(b=10), size = 12),
         axis.title.y = element_text(margin = margin(r=10), size = 12),
         axis.title.x = element_text(margin = margin(t=5), size = 12),
@@ -1059,7 +1047,6 @@ breast_cohort <- ggplot(breast_cohort_effects, aes(x = value.Coh, y = value.C.RR
     aes(x = label_pos, y = 16.5, label = label),
     inherit.aes = FALSE,
     angle = 90,
-    family = "Calibri",
     size = 3.5,
     hjust = 0)+
   labs(title = "Cohort effect, breast", x = "Birth cohort", y = "Rate ratio") +
@@ -1067,7 +1054,7 @@ breast_cohort <- ggplot(breast_cohort_effects, aes(x = value.Coh, y = value.C.RR
   scale_colour_manual(values = mycolours) + 
   scale_fill_manual(values = mycolours_light) +
   scale_linetype_manual(values = mylines) +
-  theme(text = element_text(family = "Calibri", face = "bold"),
+  theme(text = element_text(face = "bold"),
         plot.title = element_text(margin = margin(b=10), size = 12),
         axis.title.y = element_text(margin = margin(r=10), size = 12),
         axis.title.x = element_text(margin = margin(t=5), size = 12),
@@ -1095,7 +1082,7 @@ ggarrange(breast_age, colorectal_age,
           legend = "top",
           heights = c(0.8, 0.8, 1),
           labels = plot_labels,
-          font.label = list(family = "Calibri", size = 14, color = "black", face = "bold"))
+          font.label = list(size = 14, color = "black", face = "bold"))
 ggsave("../results/component_effects.pdf",
        width = 10, height = 15)
 dev.off()
@@ -1248,7 +1235,7 @@ ggplot(all_pred %>% filter(racegrp == "All"), aes(x = cohort_mid, y = rate, fill
                       labels = c("pre" = "Under 49", "post" = "49 +")) +
   scale_fill_manual(values = c("pre" = "#F8766D", "post" = "#00BFC4"),
                     labels = c("pre" = "Under 49", "post" = "49 +")) +
-  theme(text = element_text(family = "Calibri", face = "bold"),
+  theme(text = element_text(face = "bold"),
         axis.title.y = element_text(margin = margin(r=5), size = 14),
         axis.title.x = element_text(margin = margin(t=10), size = 14),
         axis.text = element_text(size = 12, colour = "black"),
