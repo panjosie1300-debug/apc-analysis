@@ -50,9 +50,9 @@ cancer <- cancer %>%
   mutate(period_mid = (period_start + period_end)/2)
 cancer$period_mid <- as.numeric(cancer$period_mid)
 
-## Filter data down to include only cases for females aged 25 to 84 until the year 2023
+## Filter data down to include only cases for females aged 25 to 84 until the year 2022
 cancer_clean <- cancer %>%
-  filter(sex == "F", period_end <= 2023) %>%
+  filter(sex == "F", period_end <= 2022) %>%
   ## Clean age column and split into two numeric variables representing lower and upper bounds of age group
   mutate(
     agedxgrp = str_remove_all(agedxgrp, "Years"),
@@ -89,7 +89,7 @@ cancer_clean$n4 <- as.numeric(cancer_clean$n4)
 
 
 ## -----------------------------------------------------------------------------
-## 2. DESCRIPTIVE STATISTICS (overall and by race, for breast/colorectal)
+## 2. DESCRIPTIVE STATISTICS (overall and by ethnicity, for breast/colorectal)
 ## -----------------------------------------------------------------------------
 
 ## descriptive stats
@@ -101,7 +101,7 @@ descriptive <- tibble(
 descriptive$breast_percent = sum(breast$n3)/descriptive$total_cases*100
 descriptive$colo_percent = sum(colo$n3)/descriptive$total_cases*100
 
-# Breast cancer case totals by race group (CN = Chinese, IN = Indian, MY = Malay, XX = other/unknown)
+# Breast cancer case totals by ethnicity group (CN = Chinese, IN = Indian, MY = Malay, XX = other/unknown)
 CN_total_breast <- breast %>%
   filter(racegrp == "CN") %>%
   summarise(total = sum(n3)) %>%
@@ -155,7 +155,7 @@ colo_byrace
 
 
 ## -----------------------------------------------------------------------------
-## 3. RESTRICT TO 3 MAJOR RACE GROUPS AND DERIVE COHORT MIDPOINTS
+## 3. RESTRICT TO 3 MAJOR ETHNICITY GROUPS AND DERIVE COHORT MIDPOINTS
 ## -----------------------------------------------------------------------------
 
 ## remove XX racegrp, leaving 3 major race groups in Singapore, Chinese (CN), Malay (MY) and Indian
@@ -194,7 +194,7 @@ pop <- pop %>%
     age_start = as.numeric(str_extract(agedxgrp, "\\d+"))
   )
 pop_clean <- pop %>%
-  filter(age_start >= 25 & age_start <= 80, sex == "F", year <= 2023, racegrp != "XX")
+  filter(age_start >= 25 & age_start <= 80, sex == "F", year <= 2022, racegrp != "XX")
 
 ## Assign populations to year periods in cancer_clean
 # (join each single calendar year of population data to the 5-year period it falls within)
@@ -222,10 +222,10 @@ data <- cancer_clean %>% left_join(pop_sum, by = c("period", "agedxgrp", "racegr
 ## 5. AGE-STANDARDISED INCIDENCE RATES (ASR) BY PERIOD, STRATIFIED BY ETHNICITY
 ## -----------------------------------------------------------------------------
 
-# Plot age-standardized incidence rates of colorectal cancer stratified by ethnic group from 1968 to 2023 (as indicated by the midyear of the 5-yearly intervals).
+# Plot age-standardized incidence rates of colorectal cancer stratified by ethnic group from 1968 to 2022 (as indicated by the midyear of the 5-yearly intervals).
 # https://seer.cancer.gov/stdpopulations/stdpop.19ages.html
 
-# Helper: fix the display order of race groups (used consistently across all plots below)
+# Helper: fix the display order of ethnicity groups (used consistently across all plots below)
 set_race_levels <- function(df) df %>% mutate(racegrp = factor(racegrp, levels = c("All", "IN", "MY", "CN")))
 
 # SEGI world standard population weights, by 5-year age band, used for direct age-standardisation
@@ -339,7 +339,7 @@ asr_smoothed_2 <- smooth_asr(asr_summary_2)
 asr_smoothed_3 <- smooth_asr(asr_summary_3)
 asr_smoothed_4 <- smooth_asr(asr_summary_4)
 
-# Shared colour/linetype scheme for race groups, used across all plots below
+# Shared colour/linetype scheme for ethnicity groups, used across all plots below
 mycolours <- c("All" = "#002D62", 
                "IN" = "#785EF0", 
                "MY" = "#DC267F",
@@ -350,7 +350,7 @@ mylines <- c("All" = "solid",
              "MY"  = "4212",   
              "CN"  = "11") 
 
-# Plot smoothed breast cancer ASR trend over calendar year, by race
+# Plot smoothed breast cancer ASR trend over calendar year, by ethnicity
 breast_stand_smooth <- function(df) {
   df %>%
     filter(site == "Breast") %>%
@@ -364,9 +364,9 @@ breast_stand_smooth <- function(df) {
     ylim(0,110) +
     labs(x = "Year", 
          y = "Breast cancer ASR",
-         colour = "Race",
-         linetype = "Race",
-         fill = "Race") +
+         colour = "Ethnicity",
+         linetype = "Ethnicity",
+         fill = "Ethnicity") +
     theme_classic() +
     theme(text = element_text(face = "bold"),
           axis.title.y = element_text(margin = margin(r=5), size = 14),
@@ -380,7 +380,7 @@ breast_stand_smooth <- function(df) {
           plot.margin = margin(t = 25))
 }
 
-# Plot smoothed colorectal cancer ASR trend over calendar year, by race
+# Plot smoothed colorectal cancer ASR trend over calendar year, by ethnicity
 colo_stand_smooth <- function(df) {
   df %>%
     filter(site == "Colon & rectum") %>%
@@ -394,9 +394,9 @@ colo_stand_smooth <- function(df) {
     ylim(0,110) +
     labs(x = "Year", 
          y = "Colorectal cancer ASR",
-         colour = "Race",
-         linetype = "Race", 
-         fill = "Race") +
+         colour = "Ethnicity",
+         linetype = "Ethnicity", 
+         fill = "Ethnicity") +
     theme_classic() +
     theme(text = element_text(face = "bold"),
           axis.title.y = element_text(margin = margin(r=5), size = 14),
@@ -407,7 +407,7 @@ colo_stand_smooth <- function(df) {
           axis.ticks = element_line(linewidth = 1),
           legend.text = element_text(size = 12),
           plot.title = element_text(hjust = 0.5),
-          plot.margin = margin(t = 25))
+          plot.margin = margin(t = 25, r = 5))
 }
 
 # Generate each combination of site x suppression-resolution scheme (1-4)
@@ -442,11 +442,11 @@ ggarrange(breast_stand_smooth_1, NULL, colo_stand_smooth_1,
           hjust = 0, widths = c(1,0.1,1), heights = c(1, 0.05, 1, 0.05, 1, 0.05, 1),
           ncol = 3, nrow = 7, common.legend = T)
 
-ggsave("../results/diff_suppression_counts_smoothed_asr.pdf", width = 8, height = 11)
+ggsave("../results/diff_suppression_counts_smoothed_asr.pdf", width = 9, height = 13)
 dev.off()
 
 ## Plot Figure 1. Age-standardised breast (left) and colorectal (right) cancer incidence rates in females 
-##                of different races in Singapore aged 25 to 84, 1968 - 2023. Year refers to midyears of 
+##                of different ethnicities in Singapore aged 25 to 84, 1968 - 2022. Year refers to midyears of 
 ##                5-year periods; CN = Chinese, IN = Indian, MY = Malay, All = CN+IN+MY. Shading indicates
 ##                95 % confidence intervals; curves and confidence intervals smoothed with Loess smoothing, span = 0.75.
 
@@ -505,7 +505,7 @@ poisson_ci <- function(count, pop, multiplier = 100000, conf.level = 0.95) {
   tibble(value = rate, lowercl = lci, uppercl = uci)
 }
 
-# Colorectal: combine cases/population across all periods, by age band and race, then compute rates
+# Colorectal: combine cases/population across all periods, by age band and ethnicity, then compute rates
 age_spec_colo_3 <- data %>%
   filter(site == "Colon & rectum") %>%
   group_by(age_mid, racegrp) %>%
@@ -543,7 +543,7 @@ age_spec_smooth_colo <- function(df) {
     scale_linetype_manual(values = mylines) +
     scale_fill_manual(values = mycolours_light) +
     labs(x = "Age (years)", y = "Colorectal cancer incidence per 100,000", 
-         colour = "Race", linetype = "Race", fill = "Race") +
+         colour = "Ethnicity", linetype = "Ethnicity", fill = "Ethnicity") +
     theme_classic() +
     scale_x_continuous(breaks = seq(20, 80, by = 10))+
     theme(text = element_text(face = "bold"),
@@ -557,7 +557,7 @@ age_spec_smooth_colo <- function(df) {
           plot.title = element_text(hjust = 0.5))
 }
 
-# Plot smoothed age-specific breast cancer incidence curve, by race
+# Plot smoothed age-specific breast cancer incidence curve, by ethnicity
 age_spec_smooth_breast <- function(df) {
   ggplot(df, aes(x = age_mid, y = value, colour = racegrp, linetype = racegrp)) +
     geom_ribbon(aes(ymin = lowercl, ymax = uppercl, fill = racegrp), colour = NA, alpha = 0.3) +
@@ -567,7 +567,7 @@ age_spec_smooth_breast <- function(df) {
     scale_linetype_manual(values = mylines) +
     scale_fill_manual(values = mycolours_light) +
     labs(x = "Age (years)", y = "Breast cancer incidence per 100,000", 
-         colour = "Race", linetype = "Race", fill = "Race") +
+         colour = "Ethnicity", linetype = "Ethnicity", fill = "Ethnicity") +
     theme_classic() +
     scale_x_continuous(breaks = seq(20, 80, by = 10))+
     theme(text = element_text(face = "bold"),
@@ -586,7 +586,7 @@ age_spec_smooth_breast_3 <- age_spec_smooth_breast(age_spec_breast_3)
 
 
 ggarrange(age_spec_smooth_breast_3, age_spec_smooth_colo_3, ncol = 2, nrow = 1, common.legend = T)
-ggsave("../results/smooth_age_specific_rate_with_age.pdf", width = 8, height = 4.5)
+ggsave("../results/smooth_age_specific_rate_with_age.pdf", width = 8.5, height = 5)
 dev.off()
 
 
@@ -596,7 +596,7 @@ dev.off()
 
 ## To look at how age-incidence changes over periods for breast and colorectal cancer
 
-# Overall age-specific colorectal cancer rates stratified by ethnicity and 5-yearly diagnosis period from 1968 – 2023 (as indicated by the first year of the 5-yearly intervals).
+# Overall age-specific colorectal cancer rates stratified by ethnicity and 5-yearly diagnosis period from 1968 – 2022 (as indicated by the first year of the 5-yearly intervals).
 poisson_ci <- function(count, pop, multiplier = 100000, conf.level = 0.95) {
   alpha <- 1 - conf.level
   rate <- count / pop * multiplier
@@ -605,7 +605,7 @@ poisson_ci <- function(count, pop, multiplier = 100000, conf.level = 0.95) {
   tibble(value = rate, lowercl = lci, uppercl = uci)
 }
 
-# Colorectal: age-specific rates computed separately for each period (not combined), race group "All" only
+# Colorectal: age-specific rates computed separately for each period (not combined), ethnicity group "All" only
 age_spec_colo_3_overyears <- data %>%
   filter(site == "Colon & rectum") %>%
   group_by(age_mid, racegrp, period_mid) %>%
@@ -619,7 +619,7 @@ age_spec_colo_3_overyears <- data %>%
 age_spec_colo_overyears <- set_race_levels(age_spec_colo_3_overyears) %>%
   filter(racegrp == "All")
 
-# Breast: same as above, by period, race group "All" only
+# Breast: same as above, by period, ethnicity group "All" only
 age_spec_breast_3_overyears <- data %>%
   filter(site == "Breast") %>%
   group_by(age_mid, racegrp, period_mid) %>%
@@ -703,8 +703,8 @@ plot_age_spec_breast <- function(df) {
           axis.line = element_line(linewidth = 1),
           axis.ticks = element_line(linewidth = 1),
           legend.text = element_text(size = 12),
-          legend.key.width = unit(2.5, "cm"),
-          plot.title = element_text(hjust = 0.5))
+          legend.title = element_text(vjust = 0.8),
+          legend.key.width = unit(2.5, "cm"))
 }
 
 age_spec_colo_overyears_plot <- plot_age_spec_colo(age_spec_colo_overyears)
@@ -716,7 +716,7 @@ age_spec_breast_overyears_plot <- plot_age_spec_breast(age_spec_breast_overyears
 ##           intervals smoothed with Loess smoothing, span = 0.75
 
 ggarrange(age_spec_breast_overyears_plot, age_spec_colo_overyears_plot, ncol = 2, nrow = 1, common.legend = T)
-ggsave("../results/smooth_age_specific_rate_overtheyears.pdf", width = 8, height = 4.5)
+ggsave("../results/smooth_age_specific_rate_overtheyears.pdf", width = 9.5, height = 5.5)
 dev.off()
 
 
@@ -724,7 +724,7 @@ dev.off()
 ## 8. FIT AGE-PERIOD-COHORT (APC) MODELS, PER RACE GROUP, FOR EACH CANCER SITE
 ## -----------------------------------------------------------------------------
 
-# Fit APC model for breast and colorectal cancer in females for each race 
+# Fit APC model for breast and colorectal cancer in females for each ethnicity 
 
 ## set references to be lower bounds of ranges
 ref_period <- 1970
@@ -735,7 +735,8 @@ fit_apc <- function(data) {
   apc.fit(
     ref.c = ref_cohort,
     ref.p = ref_period,
-    model = "ns",    
+    model = "ns",
+    scale = 1e5,
     A = data$age_mid,
     P = data$period_mid,
     D = data$n3,
@@ -835,22 +836,22 @@ colorectal_age_effects    <- set_race_levels(colorectal_age_effects)
 colorectal_period_effects <- set_race_levels(colorectal_period_effects)
 colorectal_cohort_effects <- set_race_levels(colorectal_cohort_effects)
 
-# Colorectal age effect: incidence per 100,000 as a function of age, faceted by race, marking menopause age
+# Colorectal age effect: incidence per 100,000 as a function of age, faceted by ethnicity, marking menopause age
 colorectal_age <-  ggplot(colorectal_age_effects, aes(x = value.Age, y = value.Rate, colour = racegrp, fill = racegrp, linetype = racegrp)) +
   geom_ribbon(aes(ymin = value.2.5., ymax = value.97.5.), colour = NA, alpha = 0.3) +
   geom_line(linewidth = 0.8) +
   facet_wrap(~racegrp) +
   geom_vline(xintercept = menopause_age, linetype = "dashed", colour = "grey30") +
-  annotate("text", x = menopause_age - 12, y = 0.011, 
+  annotate("text", x = menopause_age - 12, y = 1100, 
            label = "< 49 years", size = 4) +
-  annotate("text", x = menopause_age + 15, y = 0.011, 
+  annotate("text", x = menopause_age + 15, y = 1100, 
            label = "> 49 years", size = 4) +
   labs(title = "Age effect, colorectal", 
        x = "Age (years)", 
        y = "Incidence per 100,000",
-       colour = "Race",
-       linetype = "Race",
-       fill = "Race") +
+       colour = "Ethnicity",
+       linetype = "Ethnicity",
+       fill = "Ethnicity") +
   theme_classic() + 
   scale_colour_manual(values = mycolours) + 
   scale_fill_manual(values = mycolours_light) +
@@ -866,7 +867,7 @@ colorectal_age <-  ggplot(colorectal_age_effects, aes(x = value.Age, y = value.R
         legend.text = element_text(size = 11))
 
 ### plot colorectal cancer period effects
-# Colorectal period effect: rate ratio relative to ref_period, faceted by race
+# Colorectal period effect: rate ratio relative to ref_period, faceted by ethnicity
 colorectal_period <- ggplot(colorectal_period_effects, aes(x = value.Per, y = value.P.RR, colour = racegrp, fill = racegrp, linetype = racegrp)) +
   geom_ribbon(aes(ymin = value.2.5., ymax = value.97.5.), colour = NA, alpha = 0.3) +
   geom_line(linewidth = 0.8) +
@@ -889,7 +890,7 @@ colorectal_period <- ggplot(colorectal_period_effects, aes(x = value.Per, y = va
         axis.text.x = element_text(hjust = 1, angle = 45)) 
 
 ### plot colorectal cancer cohort effects
-# Colorectal cohort effect: rate ratio relative to ref_cohort, faceted by race, with generation bands
+# Colorectal cohort effect: rate ratio relative to ref_cohort, faceted by ethnicity, with generation bands
 colorectal_cohort <- ggplot(colorectal_cohort_effects, aes(x = value.Coh, y = value.C.RR, colour = racegrp, fill = racegrp, linetype = racegrp)) +
   geom_vline(data = generation_bounds, aes(xintercept = x_min), 
              linetype = "dotted", colour = "grey50", inherit.aes = FALSE) +
@@ -974,22 +975,22 @@ breast_period_effects     <- set_race_levels(breast_period_effects)
 breast_cohort_effects     <- set_race_levels(breast_cohort_effects)
 
 ### plot breast cancer age effects
-# Breast age effect: incidence per 100,000 as a function of age, faceted by race, marking menopause age
+# Breast age effect: incidence per 100,000 as a function of age, faceted by ethnicity, marking menopause age
 breast_age <-  ggplot(breast_age_effects, aes(x = value.Age, y = value.Rate, colour = racegrp, fill = racegrp, linetype = racegrp)) +
   geom_ribbon(aes(ymin = value.2.5., ymax = value.97.5.), colour = NA, alpha = 0.3) +
   geom_line(linewidth = 0.8) +
   facet_wrap(~racegrp) +
   geom_vline(xintercept = menopause_age, linetype = "dashed", colour = "grey30") +
-  annotate("text", x = menopause_age - 12, y = 0.0025, 
+  annotate("text", x = menopause_age - 12, y = 240, 
            label = "< 49 years", size = 4) +
-  annotate("text", x = menopause_age + 15, y = 0.0025, 
+  annotate("text", x = menopause_age + 15, y = 240, 
            label = "> 49 years", size = 4) +
   labs(title = "Age effect, breast", 
        x = "Age (years)", 
        y = "Incidence per 100,000",
-       colour = "Race",
-       linetype = "Race",
-       fill = "Race") +
+       colour = "Ethnicity",
+       linetype = "Ethnicity",
+       fill = "Ethnicity") +
   theme_classic() + 
   scale_colour_manual(values = mycolours) + 
   scale_fill_manual(values = mycolours_light) +
@@ -1005,7 +1006,7 @@ breast_age <-  ggplot(breast_age_effects, aes(x = value.Age, y = value.Rate, col
         legend.text = element_text(size = 11))
 
 ### plot breast cancer period effects
-# Breast period effect: rate ratio relative to ref_period, faceted by race
+# Breast period effect: rate ratio relative to ref_period, faceted by ethnicity
 breast_period <- ggplot(breast_period_effects, aes(x = value.Per, y = value.P.RR, colour = racegrp, fill = racegrp, linetype = racegrp)) +
   geom_ribbon(aes(ymin = value.2.5., ymax = value.97.5.), colour = NA, alpha = 0.3) +
   geom_line(linewidth = 0.8) +
@@ -1028,7 +1029,7 @@ breast_period <- ggplot(breast_period_effects, aes(x = value.Per, y = value.P.RR
         axis.text.x = element_text(hjust = 1, angle = 45)) 
 
 ### plot breast cancer cohort effects
-# Breast cohort effect: rate ratio relative to ref_cohort, faceted by race, with generation bands
+# Breast cohort effect: rate ratio relative to ref_cohort, faceted by ethnicity, with generation bands
 breast_cohort <- ggplot(breast_cohort_effects, aes(x = value.Coh, y = value.C.RR, colour = racegrp, fill = racegrp, linetype = racegrp)) +
   geom_vline(data = generation_bounds, aes(xintercept = x_min), 
              linetype = "dotted", colour = "grey50", inherit.aes = FALSE) +
@@ -1064,7 +1065,7 @@ breast_cohort <- ggplot(breast_cohort_effects, aes(x = value.Coh, y = value.C.RR
 
 ## arrange all component effects together in 2 panels
 ## Figure 4. Age, period and cohort effects on breast (left) and colorectal (right) cancer incidence 
-##           in females aged 25 to 84 of different ethnicities, 1968-2023. Age, year, and birth cohort 
+##           in females aged 25 to 84 of different ethnicities, 1968-2022. Age, year, and birth cohort 
 ##          refer to 5-year midyears; CN = Chinese, IN = Indian, MY = Malay, All = CN+IN+MY
 
 plot_labels <- c(
@@ -1090,7 +1091,7 @@ dev.off()
 
 # Apply BH correction across ALL p-values collected (excluding the NA baseline Age rows)
 
-## Collect every Anova table across sites and race groups
+## Collect every Anova table across sites and ethnicity groups
 all_anova <- bind_rows(
   lapply(names(apc_results_breast), function(r) {
     apc_results_breast[[r]]$Anova %>% mutate(racegrp = r, site = "Breast")
@@ -1105,12 +1106,13 @@ all_anova <- all_anova %>%
   mutate(p_adj_BH = p.adjust(`Pr(>Chi)`, method = "BH"))
 
 ## Table 1. Goodness-of-fit measures for APC analyses of colorectal and breast cancer incidence 
-##          in females of different ethnicities aged 25 - 84 in Singapore, 1968–2023. AIC refers 
+##          in females of different ethnicities aged 25 - 84 in Singapore, 1968–2022. AIC refers 
 ##          to Akaike Information Criterion, df refers to degrees of freedom used in the model, 
 ##          p refers to the p-value from the likelihood ratio test between models in adjacent 
 ##          lines corrected with Benjamini-Hochberg method, Dev refers to model deviance, and χ²/df 
 ##          refers to Pearson χ²/df dispersion ratio.
 all_anova 
+write.csv(all_anova, "../results/APC_anova.csv", row.names = F)
 
 # Check for overdispersion in the model
 check_dispersion <- function(model_fit) {
@@ -1141,7 +1143,7 @@ dispersion_all %>%
 
 # See how cohort effects differ by women under average menopause age of 49 vs 49+ women
 
-# For each race group, test (via nested quasi-Poisson GLMs) whether the cohort effect on breast
+# For each ethnicity group, test (via nested quasi-Poisson GLMs) whether the cohort effect on breast
 # cancer incidence differs significantly between women under 49 and women 49+
 cohort_by_age_group_test <- lapply(unique(data$racegrp), function(race) {
   filtered_data <- data %>% filter(site == "Breast", racegrp == race) %>%
@@ -1246,5 +1248,5 @@ ggplot(all_pred %>% filter(racegrp == "All"), aes(x = cohort_mid, y = rate, fill
     colour = "Age group",
     fill = "Age group"
   )
-ggsave("../results/pre_vs_post_cohort_effects.pdf", width = 7, height = 5)
+ggsave("../results/pre_vs_post_cohort_effects.pdf", width = 8, height = 6)
 dev.off()
