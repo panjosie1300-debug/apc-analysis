@@ -8,7 +8,7 @@
 
 # Install and load packages
 required_packages <- list("dplyr", "splines", "tidyr", "ggplot2", "Epi", "stringr", 
-                          "colorspace", "ggpubr", "showtext", "epitools", "purrr", "viridis", 
+                          "colorspace", "ggpubr", "epitools", "purrr", "viridis", 
                           "rstudioapi")
 packages_to_install <- required_packages[!required_packages %in% installed.packages()]
 install.packages(packages_to_install)
@@ -30,7 +30,6 @@ library(Epi)
 library(stringr)
 library(colorspace)
 library(ggpubr)
-library(showtext)
 library(epitools)
 library(purrr)
 
