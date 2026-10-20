@@ -1491,4 +1491,3 @@ model_structure <- dplyr::bind_rows(
 )
 
 model_structure
-write.csv(model_structure, "../results/model_structure.csv", row.names = F)
