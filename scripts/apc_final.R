@@ -1346,6 +1346,7 @@ table1_imp4 <- all_anova_4 %>%
   select(site, racegrp, Model, `H0      `, AIC, `Mod. df.`, `Mod. dev.`, `Test df.`, `Test dev.`,
          `Pr(>Chi)`, p_BH_poisson, phi, F_adj, p_adj, p_adj_BH, chisq_df, resid_df)
 
+## Compare APC nested model comparisons for Indian population with different imputed values (Table S1)
 IN_imp1_apc <- subset(table1_imp1, racegrp == "IN")
 IN_imp1_apc$imp_val <- 1
 
@@ -1362,9 +1363,12 @@ IN_imp_compare_apc <- bind_rows(IN_imp1_apc, IN_imp2_apc, IN_imp3_apc, IN_imp4_a
   select(site, racegrp,	Model, `H0      `, p_adj_BH, imp_val)
 write.csv(IN_imp_compare_apc, "../results/IN_imp_compare_apc.csv", row.names = F)
 
+## Table 1 uses imputed value 3
+write.csv(table1_imp3, "../results/APC_anova3.csv", row.names = FALSE)
+
+## Anova tables for other imputation values 1,2, and 4
 write.csv(table1_imp1, "../results/APC_anova1.csv", row.names = FALSE)
 write.csv(table1_imp2, "../results/APC_anova2.csv", row.names = FALSE)
-write.csv(table1_imp3, "../results/APC_anova3.csv", row.names = FALSE)
 write.csv(table1_imp4, "../results/APC_anova4.csv", row.names = FALSE)
 
 ## -----------------------------------------------------------------------------
