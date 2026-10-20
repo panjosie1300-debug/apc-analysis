@@ -78,3 +78,9 @@ will:
 - `component_effects.pdf` — Figure 4: APC component effects
 - `pre_vs_post_cohort_effects.pdf` — Figure 5: cohort effects by menopausal age group
 - `diff_suppression_counts_smoothed_asr.pdf` — sensitivity analysis
+- `APC_anova1.csv` — ANOVA table with imputed value as 1
+- `APC_anova2.csv` — ANOVA table with imputed value as 2
+- `APC_anova3.csv` — ANOVA table with imputed value as 3 (Table 1)
+- `APC_anova4.csv` — ANOVA table with imputed value as 4
+- `IN_imp_compare_apc.csv` — Table for comparing nested model comparisons for Indian population specifcally (Table S1)
+
