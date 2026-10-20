@@ -2,7 +2,6 @@
 ## Comparative age–period–cohort analysis reveals divergent temporal trajectories 
 ## of breast and colorectal cancer among women in Singapore
 ## ==============================================================================
-
 ## -----------------------------------------------------------------------------
 ## 0. SETUP: install/load packages, register fonts
 ## -----------------------------------------------------------------------------
@@ -19,8 +18,8 @@ install.packages(packages_to_install)
 ## repo's scripts/ folder. Open this .R file in Rstudio and click on somewhere within 
 ## the code in the editor to make this the active file before running the script from
 ## top to bottom.
-library(rstudioapi)
-setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+
+
 
 # load other packages
 library(dplyr)
@@ -87,6 +86,11 @@ cancer_clean$n2 <- as.numeric(cancer_clean$n2)
 cancer_clean$n3 <- as.numeric(cancer_clean$n3)
 cancer_clean$n4 <- as.numeric(cancer_clean$n4)
 
+## Count number of imputed cells in the Indian population for CRC
+imputedIN <- subset(cancer_clean, racegrp == "IN"& n == "<5" & site == "Colon & rectum")
+totalIN <- subset(cancer_clean, racegrp == "IN"& site == "Colon & rectum")
+proportion_imputed <- count(imputedIN)/count(totalIN)*100
+proportion_imputed
 
 ## -----------------------------------------------------------------------------
 ## 2. DESCRIPTIVE STATISTICS (overall and by ethnicity, for breast/colorectal)
@@ -217,7 +221,6 @@ pop_sum <- bind_rows(pop_clean, all_pop) %>%
 ## Join population data to incidence dataset
 data <- cancer_clean %>% left_join(pop_sum, by = c("period", "agedxgrp", "racegrp", "sex"))
 
-
 ## -----------------------------------------------------------------------------
 ## 5. AGE-STANDARDISED INCIDENCE RATES (ASR) BY PERIOD, STRATIFIED BY ETHNICITY
 ## -----------------------------------------------------------------------------
@@ -301,7 +304,7 @@ asr_summary_3 <- data %>%
     bind_cols(grp_name, result)
   })
 asr_summary_3 <- set_race_levels(asr_summary_3)
-
+write.csv(asr_summary_3, "../results/asr_summary_3.csv", row.names = F)
 asr_summary_4 <- data %>%
   group_by(site, racegrp, period_mid) %>%
   group_split() %>%
@@ -445,10 +448,11 @@ ggarrange(breast_stand_smooth_1, NULL, colo_stand_smooth_1,
 ggsave("../results/diff_suppression_counts_smoothed_asr.pdf", width = 9, height = 13)
 dev.off()
 
-## Plot Figure 1. Age-standardised breast (left) and colorectal (right) cancer incidence rates in females 
-##                of different ethnicities in Singapore aged 25 to 84, 1968 - 2022. Year refers to midyears of 
-##                5-year periods; CN = Chinese, IN = Indian, MY = Malay, All = CN+IN+MY. Shading indicates
-##                95 % confidence intervals; curves and confidence intervals smoothed with Loess smoothing, span = 0.75.
+
+## Figure 1. Age-standardised breast (left) and colorectal (right) cancer incidence rates in females 
+## in Singapore aged 25 to 84 by ethnicity from 1968 to 2022. Year refers to midyears of 5-year periods;
+## CN=Chinese, IN=Indian, MY=Malay, Three ethnic groups combined=CN+IN+MY. Curves were smoothed with Loess 
+## smoothing, span = 0.75; shading indicates 95% confidence intervals around fitted Loess curves.
 
 # Use imputation value 3 (i.e. n3, <5 counts -> 3) as the main analysis
 breast_stand <- breast_stand_smooth_3 + ylim(0,90)
@@ -468,10 +472,10 @@ dev.off()
 ## -----------------------------------------------------------------------------
 
 # Plot age-specific cancer rates stratified by ethnicity and 5-year period i.e. Figure 2
-## Figure 2. Age-specific rates of breast (left) and colorectal (right) cancer in females of different 
-##           ethnicities aged 25 to 84 in Singapore. Age refers to midyears of 5-year age groups; 
-##           CN = Chinese, IN = Indian, MY = Malay, All = CN+IN+MY. Shading indicates 95 % confidence 
-##           intervals; curves and confidence intervals smoothed with Loess smoothing, span = 0.75
+## Figure 2. Age-specific rates of breast (left) and colorectal (right) cancer in females aged 25 to 84 
+## by ethnicity in Singapore. Age refers to midyears of 5-year age groups; CN=Chinese, IN=Indian, MY=Malay, 
+## Three ethnic groups combined=CN+IN+MY. Curves were smoothed with Loess smoothing, span = 0.75; shading 
+## indicates 95% confidence intervals around fitted Loess curves.
 
 # Smooth an age-specific rate curve (with CIs) per race group, using a weighted Loess fit
 smooth_age <- function(df, span = 0.75, n_out = 200) {
@@ -506,7 +510,7 @@ poisson_ci <- function(count, pop, multiplier = 100000, conf.level = 0.95) {
 }
 
 # Colorectal: combine cases/population across all periods, by age band and ethnicity, then compute rates
-age_spec_colo_3 <- data %>%
+age_spec_colo_3_raw <- data %>%
   filter(site == "Colon & rectum") %>%
   group_by(age_mid, racegrp) %>%
   summarise(
@@ -516,11 +520,11 @@ age_spec_colo_3 <- data %>%
   ) %>%
   bind_cols(poisson_ci(count = .$total_cases, pop = .$total_pop))
 
-age_spec_colo_3 <- set_race_levels(age_spec_colo_3) %>%
+age_spec_colo_3 <- set_race_levels(age_spec_colo_3_raw) %>%
   smooth_age()
 
 # Breast: same as above, combined across all periods
-age_spec_breast_3 <- data %>%
+age_spec_breast_3_raw <- data %>%
   filter(site == "Breast") %>%
   group_by(age_mid, racegrp) %>%
   summarise(
@@ -530,7 +534,7 @@ age_spec_breast_3 <- data %>%
   ) %>%
   bind_cols(poisson_ci(count = .$total_cases, pop = .$total_pop))
 
-age_spec_breast_3 <- set_race_levels(age_spec_breast_3) %>%
+age_spec_breast_3 <- set_race_levels(age_spec_breast_3_raw) %>%
   smooth_age()
 
 
@@ -616,7 +620,7 @@ age_spec_colo_3_overyears <- data %>%
   ) %>%
   bind_cols(poisson_ci(count = .$total_cases, pop = .$total_pop))
 
-age_spec_colo_overyears <- set_race_levels(age_spec_colo_3_overyears) %>%
+age_spec_colo_overyears_raw <- set_race_levels(age_spec_colo_3_overyears) %>%
   filter(racegrp == "All")
 
 # Breast: same as above, by period, ethnicity group "All" only
@@ -630,7 +634,7 @@ age_spec_breast_3_overyears <- data %>%
   ) %>%
   bind_cols(poisson_ci(count = .$total_cases, pop = .$total_pop))
 
-age_spec_breast_overyears <- set_race_levels(age_spec_breast_3_overyears) %>%
+age_spec_breast_overyears_raw <- set_race_levels(age_spec_breast_3_overyears) %>%
   filter(racegrp == "All")
 
 # Smooth age-specific rate curve (with CIs) separately within each period, using Loess smoothing
@@ -655,8 +659,8 @@ smooth_age2 <- function(df, span = 0.75, n_out = 200) {
            value = pmax(0, value),
            uppercl = pmax(0, uppercl))
 }
-age_spec_breast_overyears <- smooth_age2(age_spec_breast_overyears)
-age_spec_colo_overyears <- smooth_age2(age_spec_colo_overyears)
+age_spec_breast_overyears <- smooth_age2(age_spec_breast_overyears_raw)
+age_spec_colo_overyears <- smooth_age2(age_spec_colo_overyears_raw)
 
 
 # Plot age-specific colorectal cancer incidence, one curve per period, coloured by period
@@ -711,14 +715,13 @@ age_spec_colo_overyears_plot <- plot_age_spec_colo(age_spec_colo_overyears)
 age_spec_breast_overyears_plot <- plot_age_spec_breast(age_spec_breast_overyears)
 
 ## Figure 3. Age-incidence relationship for breast (left) and colorectal (right) cancer in females 
-##           aged 25 to 84 in Singapore overall in different periods. Age refers to midyears of 
-##           5-year age groups; shading indicates 95 % confidence intervals; curves and confidence
-##           intervals smoothed with Loess smoothing, span = 0.75
+## aged 25 to 84 in Singapore overall in different periods. Age refers to midyears of 5-year age 
+## groups; curves were smoothed with Loess smoothing, span = 0.75; shading indicates 95% confi-dence 
+## intervals around fitted Loess curves.
 
 ggarrange(age_spec_breast_overyears_plot, age_spec_colo_overyears_plot, ncol = 2, nrow = 1, common.legend = T)
 ggsave("../results/smooth_age_specific_rate_overtheyears.pdf", width = 9.5, height = 5.5)
 dev.off()
-
 
 ## -----------------------------------------------------------------------------
 ## 8. FIT AGE-PERIOD-COHORT (APC) MODELS, PER RACE GROUP, FOR EACH CANCER SITE
@@ -730,12 +733,40 @@ dev.off()
 ref_period <- 1970
 ref_cohort <- 1890
 
-# Fit a natural-spline APC model (Epi::apc.fit) to a single site/racegrp subset of the data
-fit_apc <- function(data) {
+# Fit a natural-spline APC model (Epi::apc.fit) to a single site/racegrp subset of the data for 
+# different imputed values, values in paper uesd imputed value 3
+fit_apc1 <- function(data) {
   apc.fit(
     ref.c = ref_cohort,
     ref.p = ref_period,
     model = "ns",
+    parm = "AdCP",
+    scale = 1e5,
+    A = data$age_mid,
+    P = data$period_mid,
+    D = data$n1,
+    Y= data$pop
+  )
+}
+fit_apc2 <- function(data) {
+  apc.fit(
+    ref.c = ref_cohort,
+    ref.p = ref_period,
+    model = "ns",
+    parm = "AdCP",
+    scale = 1e5,
+    A = data$age_mid,
+    P = data$period_mid,
+    D = data$n2,
+    Y= data$pop
+  )
+}
+fit_apc3 <- function(data) {
+  apc.fit(
+    ref.c = ref_cohort,
+    ref.p = ref_period,
+    model = "ns",
+    parm = "AdCP",
     scale = 1e5,
     A = data$age_mid,
     P = data$period_mid,
@@ -743,20 +774,57 @@ fit_apc <- function(data) {
     Y= data$pop
   )
 }
+fit_apc4 <- function(data) {
+  apc.fit(
+    ref.c = ref_cohort,
+    ref.p = ref_period,
+    model = "ns",
+    parm = "AdCP",
+    scale = 1e5,
+    A = data$age_mid,
+    P = data$period_mid,
+    D = data$n4,
+    Y= data$pop
+  )
+}
 
 # Fit one APC model per race group, for breast cancer
 breast_grouped <- data %>% filter(site == "Breast") %>% group_by(racegrp)
-apc_results_breast <- breast_grouped %>%
+apc_results_breast_1 <- breast_grouped %>%
   group_split() %>%
   setNames(group_keys(breast_grouped)$racegrp) %>%
-  lapply(fit_apc)
+  lapply(fit_apc1)
+apc_results_breast_2 <- breast_grouped %>%
+  group_split() %>%
+  setNames(group_keys(breast_grouped)$racegrp) %>%
+  lapply(fit_apc2)
+apc_results_breast_3 <- breast_grouped %>%
+  group_split() %>%
+  setNames(group_keys(breast_grouped)$racegrp) %>%
+  lapply(fit_apc3)
+apc_results_breast_4 <- breast_grouped %>%
+  group_split() %>%
+  setNames(group_keys(breast_grouped)$racegrp) %>%
+  lapply(fit_apc4)
 
 # Fit one APC model per race group, for colorectal cancer
 colo_grouped <- data %>% filter(site == "Colon & rectum") %>% group_by(racegrp)
-apc_results_colorectal <- colo_grouped %>%
+apc_results_colorectal_1 <- colo_grouped %>%
   group_split() %>%
   setNames(group_keys(colo_grouped)$racegrp) %>%
-  lapply(fit_apc)
+  lapply(fit_apc1)
+apc_results_colorectal_2 <- colo_grouped %>%
+  group_split() %>%
+  setNames(group_keys(colo_grouped)$racegrp) %>%
+  lapply(fit_apc2)
+apc_results_colorectal_3 <- colo_grouped %>%
+  group_split() %>%
+  setNames(group_keys(colo_grouped)$racegrp) %>%
+  lapply(fit_apc3)
+apc_results_colorectal_4 <- colo_grouped %>%
+  group_split() %>%
+  setNames(group_keys(colo_grouped)$racegrp) %>%
+  lapply(fit_apc4)
 
 
 ## -----------------------------------------------------------------------------
@@ -771,9 +839,9 @@ menopause_age <- 49
 # Pull a named effect component ("Age"/"Per"/"Coh") out of a fitted apc.fit object for a given site
 extract_effect <- as.data.frame(function(racegrp, effect, site) {
   if (site == "Breast"){
-    apc_results_breast[[racegrp]][[effect]]
+    apc_results_breast_3[[racegrp]][[effect]]
   } else if (site == "Colon & rectum"){
-    apc_results_colorectal[[racegrp]][[effect]]
+    apc_results_colorectal_3[[racegrp]][[effect]]
   }
 })
 
@@ -845,7 +913,7 @@ colorectal_age <-  ggplot(colorectal_age_effects, aes(x = value.Age, y = value.R
   annotate("text", x = menopause_age - 12, y = 1100, 
            label = "< 49 years", size = 4) +
   annotate("text", x = menopause_age + 15, y = 1100, 
-           label = "> 49 years", size = 4) +
+           label = "49+ years", size = 4) +
   labs(title = "Age effect, colorectal", 
        x = "Age (years)", 
        y = "Incidence per 100,000",
@@ -898,12 +966,12 @@ colorectal_cohort <- ggplot(colorectal_cohort_effects, aes(x = value.Coh, y = va
   scale_x_continuous(breaks = c(1890, 1910, 1930, 1950, 1970, 1990)) +
   geom_ribbon(aes(ymin = value.2.5., ymax = value.97.5.), colour = NA, alpha = 0.3) +
   geom_line(linewidth = 0.8) +
-  ylim(0,15) +
+  ylim(0, 4) +
   facet_wrap(~racegrp) +
   geom_hline(yintercept = 1, linetype = "dashed", colour = "grey50") +
   geom_text(
     data = generation_bounds,
-    aes(x = label_pos, y = 10, label = label),
+    aes(x = label_pos, y = 2.7, label = label),
     inherit.aes = FALSE,
     angle = 90,
     size = 3.5,
@@ -984,7 +1052,7 @@ breast_age <-  ggplot(breast_age_effects, aes(x = value.Age, y = value.Rate, col
   annotate("text", x = menopause_age - 12, y = 240, 
            label = "< 49 years", size = 4) +
   annotate("text", x = menopause_age + 15, y = 240, 
-           label = "> 49 years", size = 4) +
+           label = "49+ years", size = 4) +
   labs(title = "Age effect, breast", 
        x = "Age (years)", 
        y = "Incidence per 100,000",
@@ -1039,9 +1107,10 @@ breast_cohort <- ggplot(breast_cohort_effects, aes(x = value.Coh, y = value.C.RR
   geom_line(linewidth = 0.8) +
   facet_wrap(~racegrp) +
   geom_hline(yintercept = 1, linetype = "dashed", colour = "grey50") +
+  ylim(0, 4) +
   geom_text(
     data = generation_bounds,
-    aes(x = label_pos, y = 16.5, label = label),
+    aes(x = label_pos, y = 2.7, label = label),
     inherit.aes = FALSE,
     angle = 90,
     size = 3.5,
@@ -1064,9 +1133,10 @@ breast_cohort <- ggplot(breast_cohort_effects, aes(x = value.Coh, y = value.C.RR
         axis.text.x = element_text(hjust = 1, angle = 45))
 
 ## arrange all component effects together in 2 panels
-## Figure 4. Age, period and cohort effects on breast (left) and colorectal (right) cancer incidence 
-##           in females aged 25 to 84 of different ethnicities, 1968-2022. Age, year, and birth cohort 
-##          refer to 5-year midyears; CN = Chinese, IN = Indian, MY = Malay, All = CN+IN+MY
+## Figure 4. Age, period and cohort effects on breast (left) and colorectal (right) cancer incidence among females 
+## aged 25 to 84 years in Singapore from 1968 to 2022, overall and by ethnicity. Year 1970 was used as the reference
+## period and 1890 as the reference cohort. Age, year, and birth cohort refer to 5-year midyears; CN=Chinese, IN=Indian, 
+## MY=Malay, Combined=CN+IN+MY.
 
 plot_labels <- c(
   "a)", "b)", "c)", "d)", "e)", "f)"
@@ -1086,35 +1156,10 @@ dev.off()
 
 
 ## -----------------------------------------------------------------------------
-## 10. MODEL DIAGNOSTICS: MULTIPLE-TESTING CORRECTION AND OVERDISPERSION CHECK
+## 10. MODEL DIAGNOSTICS: OVERDISPERSION, DISPERSION-ADJUSTED TESTS, MULTIPLE-TESTING CORRECTION
 ## -----------------------------------------------------------------------------
 
-# Apply BH correction across ALL p-values collected (excluding the NA baseline Age rows)
-
-## Collect every Anova table across sites and ethnicity groups
-all_anova <- bind_rows(
-  lapply(names(apc_results_breast), function(r) {
-    apc_results_breast[[r]]$Anova %>% mutate(racegrp = r, site = "Breast")
-  }),
-  lapply(names(apc_results_colorectal), function(r) {
-    apc_results_colorectal[[r]]$Anova %>% mutate(racegrp = r, site = "Colon & rectum")
-  })
-)
-
-## Apply correction
-all_anova <- all_anova %>%
-  mutate(p_adj_BH = p.adjust(`Pr(>Chi)`, method = "BH"))
-
-## Table 1. Goodness-of-fit measures for APC analyses of colorectal and breast cancer incidence 
-##          in females of different ethnicities aged 25 - 84 in Singapore, 1968–2022. AIC refers 
-##          to Akaike Information Criterion, df refers to degrees of freedom used in the model, 
-##          p refers to the p-value from the likelihood ratio test between models in adjacent 
-##          lines corrected with Benjamini-Hochberg method, Dev refers to model deviance, and χ²/df 
-##          refers to Pearson χ²/df dispersion ratio.
-all_anova 
-write.csv(all_anova, "../results/APC_anova.csv", row.names = F)
-
-# Check for overdispersion in the model
+## 10a. Pearson chi-squared / df (dispersion) for the full APC model of each site x ethnicity group
 check_dispersion <- function(model_fit) {
   mod <- model_fit$Model
   pearson_chisq <- sum(residuals(mod, type = "pearson")^2)
@@ -1122,131 +1167,339 @@ check_dispersion <- function(model_fit) {
   ratio <- pearson_chisq / df
   tibble(pearson_chisq = pearson_chisq, df = df, dispersion_ratio = ratio)
 }
-
-dispersion_breast <- lapply(names(apc_results_breast), function(x) {
-  check_dispersion(apc_results_breast[[x]]) %>% mutate(racegrp = x, site = "Breast")
+dispersion_breast_1 <- lapply(names(apc_results_breast_1), function(x) {
+  check_dispersion(apc_results_breast_1[[x]]) %>% mutate(racegrp = x, site = "Breast")
 }) %>% bind_rows()
 
-dispersion_colorectal <- lapply(names(apc_results_colorectal), function(x) {
-  check_dispersion(apc_results_colorectal[[x]]) %>% mutate(racegrp = x, site = "Colon & rectum")
+dispersion_colorectal_1 <- lapply(names(apc_results_colorectal_1), function(x) {
+  check_dispersion(apc_results_colorectal_1[[x]]) %>% mutate(racegrp = x, site = "Colon & rectum")
 }) %>% bind_rows()
 
-dispersion_all <- bind_rows(dispersion_breast, dispersion_colorectal)
+dispersion_all_1 <- bind_rows(dispersion_breast_1, dispersion_colorectal_1)
 
-dispersion_all %>%
-  select(racegrp, site, dispersion_ratio)
+dispersion_breast_2 <- lapply(names(apc_results_breast_2), function(x) {
+  check_dispersion(apc_results_breast_2[[x]]) %>% mutate(racegrp = x, site = "Breast")
+}) %>% bind_rows()
 
+dispersion_colorectal_2 <- lapply(names(apc_results_colorectal_2), function(x) {
+  check_dispersion(apc_results_colorectal_2[[x]]) %>% mutate(racegrp = x, site = "Colon & rectum")
+}) %>% bind_rows()
+
+dispersion_all_2 <- bind_rows(dispersion_breast_2, dispersion_colorectal_2)
+
+dispersion_breast_3 <- lapply(names(apc_results_breast_3), function(x) {
+  check_dispersion(apc_results_breast_3[[x]]) %>% mutate(racegrp = x, site = "Breast")
+}) %>% bind_rows()
+
+dispersion_colorectal_3 <- lapply(names(apc_results_colorectal_3), function(x) {
+  check_dispersion(apc_results_colorectal_3[[x]]) %>% mutate(racegrp = x, site = "Colon & rectum")
+}) %>% bind_rows()
+
+dispersion_all_3 <- bind_rows(dispersion_breast_3, dispersion_colorectal_3)
+
+dispersion_breast_4 <- lapply(names(apc_results_breast_4), function(x) {
+  check_dispersion(apc_results_breast_4[[x]]) %>% mutate(racegrp = x, site = "Breast")
+}) %>% bind_rows()
+
+dispersion_colorectal_4 <- lapply(names(apc_results_colorectal_4), function(x) {
+  check_dispersion(apc_results_colorectal_4[[x]]) %>% mutate(racegrp = x, site = "Colon & rectum")
+}) %>% bind_rows()
+
+dispersion_all_4 <- bind_rows(dispersion_breast_4, dispersion_colorectal_4)
+
+# phi used for adjustment, floored at 1 so groups without overdispersion are not made more liberal
+phi_lookup_1 <- dispersion_all_1 %>%
+  mutate(phi = pmax(1, dispersion_ratio)) %>%
+  select(site, racegrp, phi)
+phi_lookup_2 <- dispersion_all_2 %>%
+  mutate(phi = pmax(1, dispersion_ratio)) %>%
+  select(site, racegrp, phi)
+phi_lookup_3 <- dispersion_all_3 %>%
+  mutate(phi = pmax(1, dispersion_ratio)) %>%
+  select(site, racegrp, phi)
+phi_lookup_4 <- dispersion_all_4 %>%
+  mutate(phi = pmax(1, dispersion_ratio)) %>%
+  select(site, racegrp, phi)
+
+## 10b. Dispersion-adjusted (quasi-likelihood F) version of each apc.fit() ANOVA table
+## F = (Test dev. / Test df.) / phi, referred to F(Test df., residual df of full APC model)
+adjust_anova_1 <- function(fit, site_label, race_label) {
+  phi <- phi_lookup_1 %>%
+    filter(site == site_label, racegrp == race_label) %>%
+    pull(phi)
+  anova_tab <- as_tibble(fit$Anova)
+  full_df <- anova_tab$`Mod. df.`[anova_tab$Model == "Age-Period-Cohort"]
+  
+  anova_tab %>%
+    mutate(racegrp = race_label, site = site_label, phi = phi, full_df = full_df,
+           F_adj = (`Test dev.` / `Test df.`) / phi,
+           p_adj = pf(F_adj, `Test df.`, full_df, lower.tail = FALSE))
+}
+adjust_anova_2 <- function(fit, site_label, race_label) {
+  phi <- phi_lookup_2 %>%
+    filter(site == site_label, racegrp == race_label) %>%
+    pull(phi)
+  anova_tab <- as_tibble(fit$Anova)
+  full_df <- anova_tab$`Mod. df.`[anova_tab$Model == "Age-Period-Cohort"]
+  
+  anova_tab %>%
+    mutate(racegrp = race_label, site = site_label, phi = phi, full_df = full_df,
+           F_adj = (`Test dev.` / `Test df.`) / phi,
+           p_adj = pf(F_adj, `Test df.`, full_df, lower.tail = FALSE))
+}
+adjust_anova_3 <- function(fit, site_label, race_label) {
+  phi <- phi_lookup_3 %>%
+    filter(site == site_label, racegrp == race_label) %>%
+    pull(phi)
+  anova_tab <- as_tibble(fit$Anova)
+  full_df <- anova_tab$`Mod. df.`[anova_tab$Model == "Age-Period-Cohort"]
+  
+  anova_tab %>%
+    mutate(racegrp = race_label, site = site_label, phi = phi, full_df = full_df,
+           F_adj = (`Test dev.` / `Test df.`) / phi,
+           p_adj = pf(F_adj, `Test df.`, full_df, lower.tail = FALSE))
+}
+adjust_anova_4 <- function(fit, site_label, race_label) {
+  phi <- phi_lookup_4 %>%
+    filter(site == site_label, racegrp == race_label) %>%
+    pull(phi)
+  anova_tab <- as_tibble(fit$Anova)
+  full_df <- anova_tab$`Mod. df.`[anova_tab$Model == "Age-Period-Cohort"]
+  
+  anova_tab %>%
+    mutate(racegrp = race_label, site = site_label, phi = phi, full_df = full_df,
+           F_adj = (`Test dev.` / `Test df.`) / phi,
+           p_adj = pf(F_adj, `Test df.`, full_df, lower.tail = FALSE))
+}
+
+all_anova_1 <- bind_rows(
+  lapply(names(apc_results_breast_1), function(r) {
+    adjust_anova_1(apc_results_breast_1[[r]], "Breast", r)
+  }),
+  lapply(names(apc_results_colorectal_1), function(r) {
+    adjust_anova_1(apc_results_colorectal_1[[r]], "Colon & rectum", r)
+  })
+)
+all_anova_2 <- bind_rows(
+  lapply(names(apc_results_breast_2), function(r) {
+    adjust_anova_2(apc_results_breast_2[[r]], "Breast", r)
+  }),
+  lapply(names(apc_results_colorectal_2), function(r) {
+    adjust_anova_2(apc_results_colorectal_2[[r]], "Colon & rectum", r)
+  })
+)
+all_anova_3 <- bind_rows(
+  lapply(names(apc_results_breast_3), function(r) {
+    adjust_anova_3(apc_results_breast_3[[r]], "Breast", r)
+  }),
+  lapply(names(apc_results_colorectal_3), function(r) {
+    adjust_anova_3(apc_results_colorectal_3[[r]], "Colon & rectum", r)
+  })
+)
+all_anova_4 <- bind_rows(
+  lapply(names(apc_results_breast_4), function(r) {
+    adjust_anova_4(apc_results_breast_4[[r]], "Breast", r)
+  }),
+  lapply(names(apc_results_colorectal_4), function(r) {
+    adjust_anova_4(apc_results_colorectal_4[[r]], "Colon & rectum", r)
+  })
+)
+
+## 10c. Benjamini-Hochberg correction (NA baseline rows are ignored by p.adjust)
+all_anova_1 <- all_anova_1 %>%
+  mutate(p_BH_poisson = p.adjust(`Pr(>Chi)`, method = "BH"),  # original Poisson LRT p-values
+         p_adj_BH     = p.adjust(p_adj, method = "BH"))       # dispersion-adjusted p-values
+all_anova_2 <- all_anova_2 %>%
+  mutate(p_BH_poisson = p.adjust(`Pr(>Chi)`, method = "BH"),  # original Poisson LRT p-values
+         p_adj_BH     = p.adjust(p_adj, method = "BH"))       # dispersion-adjusted p-values
+all_anova_3 <- all_anova_3 %>%
+  mutate(p_BH_poisson = p.adjust(`Pr(>Chi)`, method = "BH"),  # original Poisson LRT p-values
+         p_adj_BH     = p.adjust(p_adj, method = "BH"))       # dispersion-adjusted p-values
+all_anova_4 <- all_anova_4 %>%
+  mutate(p_BH_poisson = p.adjust(`Pr(>Chi)`, method = "BH"),  # original Poisson LRT p-values
+         p_adj_BH     = p.adjust(p_adj, method = "BH"))       # dispersion-adjusted p-values
+
+
+## 10d. Table 1 
+## Table 1. Table 1. Goodness-of-fit measures for APC analyses of breast and colorectal cancer incidence among
+## females aged 25 to 84 years in Singapore from 1968 to 2022, overall and by ethnicity. Year 1970 was used as 
+## the reference period and 1890 as the reference cohort. 
+
+table1_imp1 <- all_anova_1 %>%
+  left_join(dispersion_all %>% select(site, racegrp, chisq_df = dispersion_ratio, resid_df = df),
+            by = c("site", "racegrp")) %>%
+  select(site, racegrp, Model, `H0      `, AIC, `Mod. df.`, `Mod. dev.`, `Test df.`, `Test dev.`,
+         `Pr(>Chi)`, p_BH_poisson, phi, F_adj, p_adj, p_adj_BH, chisq_df, resid_df)
+table1_imp2 <- all_anova_2 %>%
+  left_join(dispersion_all %>% select(site, racegrp, chisq_df = dispersion_ratio, resid_df = df),
+            by = c("site", "racegrp")) %>%
+  select(site, racegrp, Model, `H0      `, AIC, `Mod. df.`, `Mod. dev.`, `Test df.`, `Test dev.`,
+         `Pr(>Chi)`, p_BH_poisson, phi, F_adj, p_adj, p_adj_BH, chisq_df, resid_df)
+table1_imp3 <- all_anova_3 %>%
+  left_join(dispersion_all %>% select(site, racegrp, chisq_df = dispersion_ratio, resid_df = df),
+            by = c("site", "racegrp")) %>%
+  select(site, racegrp, Model, `H0      `, AIC, `Mod. df.`, `Mod. dev.`, `Test df.`, `Test dev.`,
+         `Pr(>Chi)`, p_BH_poisson, phi, F_adj, p_adj, p_adj_BH, chisq_df, resid_df)
+table1_imp4 <- all_anova_4 %>%
+  left_join(dispersion_all %>% select(site, racegrp, chisq_df = dispersion_ratio, resid_df = df),
+            by = c("site", "racegrp")) %>%
+  select(site, racegrp, Model, `H0      `, AIC, `Mod. df.`, `Mod. dev.`, `Test df.`, `Test dev.`,
+         `Pr(>Chi)`, p_BH_poisson, phi, F_adj, p_adj, p_adj_BH, chisq_df, resid_df)
+
+IN_imp1_apc <- subset(table1_imp1, racegrp == "IN")
+IN_imp1_apc$imp_val <- 1
+
+IN_imp2_apc <- subset(table1_imp2, racegrp == "IN")
+IN_imp2_apc$imp_val <- 2
+
+IN_imp3_apc <- subset(table1_imp3, racegrp == "IN")
+IN_imp3_apc$imp_val <- 3
+
+IN_imp4_apc <- subset(table1_imp4, racegrp == "IN")
+IN_imp4_apc$imp_val <- 4
+
+IN_imp_compare_apc <- bind_rows(IN_imp1_apc, IN_imp2_apc, IN_imp3_apc, IN_imp4_apc) %>%
+  select(site, racegrp,	Model, `H0      `, p_adj_BH, imp_val)
+write.csv(IN_imp_compare_apc, "../results/IN_imp_compare_apc.csv", row.names = F)
+
+write.csv(table1_imp1, "../results/APC_anova1.csv", row.names = FALSE)
+write.csv(table1_imp2, "../results/APC_anova2.csv", row.names = FALSE)
+write.csv(table1_imp3, "../results/APC_anova3.csv", row.names = FALSE)
+write.csv(table1_imp4, "../results/APC_anova4.csv", row.names = FALSE)
 
 ## -----------------------------------------------------------------------------
-## 11. PRE- VS POST-MENOPAUSAL COHORT EFFECT IN BREAST CANCER - FIGURE 5
+## 11. PRE- VS POST-MENOPAUSAL COHORT EFFECT IN BREAST CANCER - FIGURE 5 (edited)
 ## -----------------------------------------------------------------------------
 
-# See how cohort effects differ by women under average menopause age of 49 vs 49+ women
+# Test (nested quasi-Poisson GLMs, F-test) whether the cohort effect on breast cancer incidence
+# differs between women under 49 and women 49+, then plot model-based predictions (no smoothing).
 
-# For each ethnicity group, test (via nested quasi-Poisson GLMs) whether the cohort effect on breast
-# cancer incidence differs significantly between women under 49 and women 49+
-cohort_by_age_group_test <- lapply(unique(data$racegrp), function(race) {
-  filtered_data <- data %>% filter(site == "Breast", racegrp == race) %>%
-    mutate(menopause_grp = if_else(age_mid < 49, "pre", "post"))
+# Fit the null and menopause-interaction models for one ethnicity group
+fit_meno_models <- function(race) {
+  d <- data %>%
+    filter(site == "Breast", racegrp == race) %>%
+    mutate(menopause_grp = factor(if_else(age_mid < 49, "pre", "post"), levels = c("pre", "post")),
+           log_pop = log(pop))
   
   no_meno <- glm(n3 ~ ns(cohort_mid, df = 5) + ns(age_mid, df = 5),
-                 offset = log(pop), family = quasipoisson, data = filtered_data)
+                 offset = log_pop, family = quasipoisson, data = d)
   with_meno <- glm(n3 ~ ns(cohort_mid, df = 5) * menopause_grp + ns(age_mid, df = 5),
-                   offset = log(pop), family = quasipoisson, data = filtered_data)
+                   offset = log_pop, family = quasipoisson, data = d)
   
-  test <- anova(no_meno, with_meno, test = "F")
-  tibble(racegrp = race, F_stat = test$F[2], p_value = test$`Pr(>F)`[2])
-}) %>% bind_rows()
+  list(data = d, no_meno = no_meno, with_meno = with_meno)
+}
+
+race_levels <- as.character(unique(data$racegrp))
+meno_fits <- setNames(lapply(race_levels, fit_meno_models), race_levels)
+
+# Check for aliased (NA) coefficients, which indicate sparse-data singularities (expect all FALSE)
+sapply(meno_fits, function(f) any(is.na(coef(f$with_meno))))
+
+# F-test of the cohort x age-group interaction (dispersion estimated from the larger model)
+cohort_by_age_group_test <- bind_rows(lapply(race_levels, function(r) {
+  test <- anova(meno_fits[[r]]$no_meno, meno_fits[[r]]$with_meno, test = "F")
+  tibble(racegrp = r, F_stat = test$F[2], df1 = test$Df[2], df2 = test$`Resid. Df`[2],
+         p_value = test$`Pr(>F)`[2])
+})) %>%
+  mutate(p_BH = p.adjust(p_value, method = "BH"))   # across the ethnicity strata
 
 cohort_by_age_group_test
+write.csv(cohort_by_age_group_test, "../results/cohort_by_age_group_test.csv", row.names = FALSE)
 
-# For each race group, fit both the null and menopause-interaction models and generate predicted
-# incidence rates (with 95% CIs) across birth cohort, separately for the pre- and post-49 age groups
-all_pred <- lapply(unique(data$racegrp), function(race) {
-  filtered_data <- data %>%
-    filter(site == "Breast", racegrp == race) %>%
-    mutate(
-      menopause_grp = if_else(age_mid < 49, "pre", "post"),
-      log_pop = log(pop)
-    )
+# Predicted incidence (per 100,000) by birth cohort from the interaction model, at the median
+# age of each age group and only over cohorts actually observed in that group (no extrapolation)
+predict_meno <- function(race) {
+  fits <- meno_fits[[race]]
+  d <- fits$data
   
-  no_meno <- glm(n3 ~ ns(cohort_mid, df = 5) + ns(age_mid, df = 5),
-                 offset = log_pop, family = quasipoisson, data = filtered_data)
-  with_meno <- glm(n3 ~ ns(cohort_mid, df = 5) * menopause_grp + ns(age_mid, df = 5),
-                   offset = log_pop, family = quasipoisson, data = filtered_data)
+  ref_age <- d %>%
+    group_by(menopause_grp) %>%
+    summarise(age_mid = median(age_mid), .groups = "drop")
   
-  age_pre  <- median(filtered_data$age_mid[filtered_data$menopause_grp == "pre"])
-  age_post <- median(filtered_data$age_mid[filtered_data$menopause_grp == "post"])
+  grid <- d %>%
+    distinct(menopause_grp, cohort_mid) %>%
+    left_join(ref_age, by = "menopause_grp") %>%
+    mutate(log_pop = log(100000)) %>%
+    arrange(menopause_grp, cohort_mid)
   
-  grid_pre <- expand.grid(
-    cohort_mid = sort(unique(filtered_data %>% filter(menopause_grp == "pre") %>% pull(cohort_mid))),
-    menopause_grp = "pre",
-    age_mid = age_pre
-  ) %>% mutate(log_pop = log(100000))
+  # quasi-Poisson: predict() standard errors already include the estimated dispersion
+  tcrit <- qt(0.975, df = fits$with_meno$df.residual)
+  p <- predict(fits$with_meno, newdata = grid, type = "link", se.fit = TRUE)
   
-  grid_post <- expand.grid(
-    cohort_mid = sort(unique(filtered_data %>% filter(menopause_grp == "post") %>% pull(cohort_mid))),
-    menopause_grp = "post",
-    age_mid = age_post
-  ) %>% mutate(log_pop = log(100000))
-  
-  grid <- bind_rows(grid_pre, grid_post)
-  
-  
-  predict_from <- function(model, model_label) {
-    p <- predict(model, newdata = grid, type = "link", se.fit = TRUE)
-    grid %>%
-      mutate(
-        fit = as.vector(p$fit),
-        se = as.vector(p$se.fit),
-        rate = exp(fit),
-        lowercl = exp(fit - 1.96 * se),
-        uppercl = exp(fit + 1.96 * se),
-        racegrp = race,
-        model = model_label
-      )
-  }
-  
-  bind_rows(
-    predict_from(no_meno, "Null (no menopause interaction)"),
-    predict_from(with_meno, "Stratified (menopause interaction)")
-  )
-  
-}) %>%
-  bind_rows() %>%
-  mutate(model = factor(model, levels = c("Null (no menopause interaction)",
-                                          "Stratified (menopause interaction)")))
+  grid %>%
+    mutate(fit = as.vector(p$fit),
+           se = as.vector(p$se.fit),
+           rate = exp(fit),
+           lowercl = exp(fit - tcrit * se),
+           uppercl = exp(fit + tcrit * se),
+           racegrp = race)
+}
 
-## Plot Figure 5. Overall predicted breast cancer incidence among women under the average menopause age 
-##                of 49, and women aged 49 and above. Predicted breast cancer incidence for each age 
-##                group was derived from a generalised linear model with quasi-Poisson distribution, 
-##                including age group (under 49 or 49 +) as an interaction variable, and using median age 
-##                for each group as the reference age. Birth cohort refers to 5-year midyears; 
-##                CN = Chinese, IN = Indian, MY = Malay, All = CN+IN+MY; Shading indicates 95 % confidence 
-##                intervals; curves and confidence intervals smoothed with Loess smoothing, span = 0.75
+all_pred <- bind_rows(lapply(race_levels, predict_meno)) %>%
+  set_race_levels()
 
-# Restrict to race group "All" and plot Loess-smoothed predicted incidence by cohort, split by age group
-ggplot(all_pred %>% filter(racegrp == "All"), aes(x = cohort_mid, y = rate, fill = menopause_grp, colour = menopause_grp, group = menopause_grp)) +
-  geom_smooth(method = "loess", linewidth = 1, alpha = 0.2, span = 0.75) +
-  theme_classic() +
-  scale_colour_manual(values = c("pre" = "#F8766D", "post" = "#00BFC4"),
+## Figure 5. Overall predicted breast cancer incidence among women younger than the average age at menopause 
+## (49 years) and women aged 49 years and older. Predicted breast cancer inci-dence for each age group was 
+## derived from a quasi-Poisson generalised linear model that included menopausal age group and its interaction
+## with birth cohort. The median age of each group was used as the reference age. Birth cohort refers to 5-year 
+## midyears; Shading indicates 95 % confidence intervals
+
+plot_meno <- function(df, facet = FALSE) {
+  p <- ggplot(df, aes(x = cohort_mid, y = rate, colour = menopause_grp,
+                      fill = menopause_grp, group = menopause_grp)) +
+    geom_ribbon(aes(ymin = lowercl, ymax = uppercl), colour = NA, alpha = 0.2) +
+    geom_line(linewidth = 1) +
+    theme_classic() +
+    scale_colour_manual(values = c("pre" = "#F8766D", "post" = "#00BFC4"),
+                        labels = c("pre" = "Under 49", "post" = "49 +")) +
+    scale_fill_manual(values = c("pre" = "#F8766D", "post" = "#00BFC4"),
                       labels = c("pre" = "Under 49", "post" = "49 +")) +
-  scale_fill_manual(values = c("pre" = "#F8766D", "post" = "#00BFC4"),
-                    labels = c("pre" = "Under 49", "post" = "49 +")) +
-  theme(text = element_text(face = "bold"),
-        axis.title.y = element_text(margin = margin(r=5), size = 14),
-        axis.title.x = element_text(margin = margin(t=10), size = 14),
-        axis.text = element_text(size = 12, colour = "black"),
-        axis.ticks.length = unit(0.2, "cm"),
-        axis.line = element_line(linewidth = 1),
-        axis.ticks = element_line(linewidth = 1),
-        legend.text = element_text(size = 12),
-        legend.title = element_text(size = 12)) +
-  labs(
-    x = "Birth cohort",
-    y = "Predicted breast cancer incidence rate per 100,000",
-    colour = "Age group",
-    fill = "Age group"
-  )
+    theme(text = element_text(face = "bold"),
+          axis.title.y = element_text(margin = margin(r=5), size = 14),
+          axis.title.x = element_text(margin = margin(t=10), size = 14),
+          axis.text = element_text(size = 12, colour = "black"),
+          axis.ticks.length = unit(0.2, "cm"),
+          axis.line = element_line(linewidth = 1),
+          axis.ticks = element_line(linewidth = 1),
+          legend.text = element_text(size = 12),
+          legend.title = element_text(size = 12)) +
+    labs(x = "Birth cohort",
+         y = "Predicted breast cancer incidence per 100,000",
+         colour = "Age group", fill = "Age group")
+  if (facet) p <- p + facet_wrap(~racegrp, scales = "free_y")
+  p
+}
+
+# Main figure: all three ethnicities combined
+plot_meno(all_pred %>% filter(racegrp == "All"))
 ggsave("../results/pre_vs_post_cohort_effects.pdf", width = 8, height = 6)
 dev.off()
+
+## -----------------------------------------------------------------------------
+## 12. EXPLAIN DF DIFFERENCES BETWEEN CANCERS
+## -----------------------------------------------------------------------------
+summarise_apc_structure <- function(fits, site_label) {
+  dplyr::bind_rows(lapply(names(fits), function(r) {
+    fit <- fits[[r]]
+    mod <- fit$Model
+    
+    tibble::tibble(
+      site = site_label,
+      racegrp = r,
+      n_cells_used = nrow(model.frame(mod)),
+      model_rank = mod$rank,
+      residual_df = mod$df.residual,
+      age_knots = paste(signif(fit$Knots$Age, 6), collapse = ", "),
+      period_knots = paste(signif(fit$Knots$Per, 6), collapse = ", "),
+      cohort_knots = paste(signif(fit$Knots$Coh, 6), collapse = ", ")
+    )
+  }))
+}
+
+model_structure <- dplyr::bind_rows(
+  summarise_apc_structure(apc_results_breast_3, "Breast"),
+  summarise_apc_structure(apc_results_colorectal_3, "Colon & rectum")
+)
+
+model_structure
+write.csv(model_structure, "../results/model_structure.csv", row.names = F)
