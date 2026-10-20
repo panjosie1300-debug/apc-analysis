@@ -303,7 +303,7 @@ asr_summary_3 <- data %>%
     bind_cols(grp_name, result)
   })
 asr_summary_3 <- set_race_levels(asr_summary_3)
-write.csv(asr_summary_3, "../results/asr_summary_3.csv", row.names = F)
+
 asr_summary_4 <- data %>%
   group_by(site, racegrp, period_mid) %>%
   group_split() %>%
@@ -1394,20 +1394,6 @@ fit_meno_models <- function(race) {
 
 race_levels <- as.character(unique(data$racegrp))
 meno_fits <- setNames(lapply(race_levels, fit_meno_models), race_levels)
-
-# Check for aliased (NA) coefficients, which indicate sparse-data singularities (expect all FALSE)
-sapply(meno_fits, function(f) any(is.na(coef(f$with_meno))))
-
-# F-test of the cohort x age-group interaction (dispersion estimated from the larger model)
-cohort_by_age_group_test <- bind_rows(lapply(race_levels, function(r) {
-  test <- anova(meno_fits[[r]]$no_meno, meno_fits[[r]]$with_meno, test = "F")
-  tibble(racegrp = r, F_stat = test$F[2], df1 = test$Df[2], df2 = test$`Resid. Df`[2],
-         p_value = test$`Pr(>F)`[2])
-})) %>%
-  mutate(p_BH = p.adjust(p_value, method = "BH"))   # across the ethnicity strata
-
-cohort_by_age_group_test
-write.csv(cohort_by_age_group_test, "../results/cohort_by_age_group_test.csv", row.names = FALSE)
 
 # Predicted incidence (per 100,000) by birth cohort from the interaction model, at the median
 # age of each age group and only over cohorts actually observed in that group (no extrapolation)
