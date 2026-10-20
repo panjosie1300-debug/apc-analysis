@@ -18,8 +18,8 @@ install.packages(packages_to_install)
 ## repo's scripts/ folder. Open this .R file in Rstudio and click on somewhere within 
 ## the code in the editor to make this the active file before running the script from
 ## top to bottom.
-
-
+library(rstudioapi)
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 
 # load other packages
 library(dplyr)
