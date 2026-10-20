@@ -225,22 +225,22 @@ data <- cancer_clean %>% left_join(pop_sum, by = c("period", "agedxgrp", "racegr
 ## -----------------------------------------------------------------------------
 
 # Plot age-standardized incidence rates of colorectal cancer stratified by ethnic group from 1968 to 2022 (as indicated by the midyear of the 5-yearly intervals).
-# https://seer.cancer.gov/stdpopulations/stdpop.19ages.html
+# https://cdn.who.int/media/docs/default-source/gho-documents/global-health-estimates/ghe2023_who_standard_population.pdf?sfvrsn=7aae2c85_1
 
 # Helper: fix the display order of ethnicity groups (used consistently across all plots below)
 set_race_levels <- function(df) df %>% mutate(racegrp = factor(racegrp, levels = c("All", "IN", "MY", "CN")))
 
 # SEGI world standard population weights, by 5-year age band, used for direct age-standardisation
 segi_std <- tibble(
-  age_start = c(0, seq(5, 90, by = 5)),
-  std_pop = c(24000, 96000, 100000, 90000, 90000, 80000, 80000, 60000, 60000, 
-              60000, 60000, 50000, 40000, 40000, 30000, 20000, 10000, 5000, 5000)
+  age_start = c(0, seq(5, 85, by = 5)),
+  std_pop = c(12000, 10000, 9000, 9000, 8000, 8000, 6000, 6000, 6000, 6000, 
+              5000, 4000, 4000, 3000, 2000, 1000, 500, 500)
 )
 
 # Compute a directly age-standardised rate with gamma-distribution confidence intervals
 compute_asr <- function(count, pop, stdpop, conf.level = 0.95) {
   rate <- count / pop
-  weight <- stdpop / 1000000   
+  weight <- stdpop / 100000   
   y <- sum(weight * rate)
   v <- sum((weight^2) * (count / pop^2))
   wM <- max(weight / pop)
@@ -360,9 +360,9 @@ breast_stand_smooth <- function(df) {
     geom_ribbon(aes(ymin = lowercl, ymax = uppercl, fill = racegrp),
                 colour = NA, alpha = 0.25) +
     geom_line(linewidth = 1) +
-    scale_colour_manual(values = mycolours) +
-    scale_linetype_manual(values = mylines) +
-    scale_fill_manual(values = mycolours_light) +
+    scale_colour_manual(values = mycolours, labels = c("All" = "Three ethnicities combined")) +
+    scale_linetype_manual(values = mylines, labels = c("All" = "Three ethnicities combined")) +
+    scale_fill_manual(values = mycolours_light, labels = c("All" = "Three ethnicities combined")) +
     ylim(0,110) +
     labs(x = "Year", 
          y = "Breast cancer ASR",
@@ -390,9 +390,9 @@ colo_stand_smooth <- function(df) {
     geom_ribbon(aes(ymin = lowercl, ymax = uppercl, fill = racegrp),
                 colour = NA, alpha = 0.25) +
     geom_line(linewidth =1) +
-    scale_colour_manual(values = mycolours) +
-    scale_linetype_manual(values = mylines) +
-    scale_fill_manual(values = mycolours_light) +
+    scale_colour_manual(values = mycolours, labels = c("All" = "Three ethnicities combined")) +
+    scale_linetype_manual(values = mylines, labels = c("All" = "Three ethnicities combined")) +
+    scale_fill_manual(values = mycolours_light, labels = c("All" = "Three ethnicities combined")) +
     ylim(0,110) +
     labs(x = "Year", 
          y = "Colorectal cancer ASR",
@@ -542,9 +542,9 @@ age_spec_smooth_colo <- function(df) {
   ggplot(df, aes(x = age_mid, y = value, colour = racegrp, linetype = racegrp)) +
     geom_ribbon(aes(ymin = lowercl, ymax = uppercl, fill = racegrp), colour = NA, alpha = 0.3) +
     geom_line(linewidth = 1) +
-    scale_colour_manual(values = mycolours) +
-    scale_linetype_manual(values = mylines) +
-    scale_fill_manual(values = mycolours_light) +
+    scale_colour_manual(values = mycolours, labels = c("All" = "Three ethnicities combined")) +
+    scale_linetype_manual(values = mylines, labels = c("All" = "Three ethnicities combined")) +
+    scale_fill_manual(values = mycolours_light, labels = c("All" = "Three ethnicities combined")) +
     labs(x = "Age (years)", y = "Colorectal cancer incidence per 100,000", 
          colour = "Ethnicity", linetype = "Ethnicity", fill = "Ethnicity") +
     theme_classic() +
@@ -565,10 +565,10 @@ age_spec_smooth_breast <- function(df) {
   ggplot(df, aes(x = age_mid, y = value, colour = racegrp, linetype = racegrp)) +
     geom_ribbon(aes(ymin = lowercl, ymax = uppercl, fill = racegrp), colour = NA, alpha = 0.3) +
     geom_line(linewidth = 1) +
-    scale_colour_manual(values = mycolours) +
+    scale_colour_manual(values = mycolours, labels = c("All" = "Three ethnicities combined")) +
     coord_cartesian(xlim = c(30, 84)) +
-    scale_linetype_manual(values = mylines) +
-    scale_fill_manual(values = mycolours_light) +
+    scale_linetype_manual(values = mylines, labels = c("All" = "Three ethnicities combined")) +
+    scale_fill_manual(values = mycolours_light, labels = c("All" = "Three ethnicities combined")) +
     labs(x = "Age (years)", y = "Breast cancer incidence per 100,000", 
          colour = "Ethnicity", linetype = "Ethnicity", fill = "Ethnicity") +
     theme_classic() +
@@ -907,22 +907,24 @@ colorectal_cohort_effects <- set_race_levels(colorectal_cohort_effects)
 colorectal_age <-  ggplot(colorectal_age_effects, aes(x = value.Age, y = value.Rate, colour = racegrp, fill = racegrp, linetype = racegrp)) +
   geom_ribbon(aes(ymin = value.2.5., ymax = value.97.5.), colour = NA, alpha = 0.3) +
   geom_line(linewidth = 0.8) +
-  facet_wrap(~racegrp) +
+  facet_wrap(~racegrp,
+             labeller = labeller(
+               racegrp = c("All" = "Combined"))) +
   geom_vline(xintercept = menopause_age, linetype = "dashed", colour = "grey30") +
   annotate("text", x = menopause_age - 12, y = 1100, 
            label = "< 49 years", size = 4) +
   annotate("text", x = menopause_age + 15, y = 1100, 
-           label = "49+ years", size = 4) +
+           label = "\u226549 years", size = 4) +
   labs(title = "Age effect, colorectal", 
        x = "Age (years)", 
        y = "Incidence per 100,000",
        colour = "Ethnicity",
        linetype = "Ethnicity",
        fill = "Ethnicity") +
-  theme_classic() + 
-  scale_colour_manual(values = mycolours) + 
-  scale_fill_manual(values = mycolours_light) +
-  scale_linetype_manual(values = mylines) +
+  theme_classic() +
+  scale_colour_manual(values = mycolours, labels = c("All" = "Three ethnicities combined")) + 
+  scale_fill_manual(values = mycolours_light, labels = c("All" = "Three ethnicities combined")) +
+  scale_linetype_manual(values = mylines, labels = c("All" = "Three ethnicities combined")) +
   theme(text = element_text(face = "bold"),
         plot.title = element_text(margin = margin(b=10), size = 12),
         axis.title.y = element_text(margin = margin(r=10), size = 12),
@@ -940,8 +942,10 @@ colorectal_period <- ggplot(colorectal_period_effects, aes(x = value.Per, y = va
   geom_line(linewidth = 0.8) +
   geom_hline(yintercept = 1, linetype = "dashed", colour = "grey50") +
   labs(title = "Period effect, colorectal", x = "Year", y = "Rate ratio") +
-  theme_classic() + 
-  facet_wrap(~racegrp) +
+  theme_classic() +
+  facet_wrap(~racegrp,
+             labeller = labeller(
+               racegrp = c("All" = "Combined"))) +
   scale_colour_manual(values = mycolours) + 
   scale_fill_manual(values = mycolours_light) +
   scale_linetype_manual(values = mylines) +
@@ -966,7 +970,9 @@ colorectal_cohort <- ggplot(colorectal_cohort_effects, aes(x = value.Coh, y = va
   geom_ribbon(aes(ymin = value.2.5., ymax = value.97.5.), colour = NA, alpha = 0.3) +
   geom_line(linewidth = 0.8) +
   ylim(0, 4) +
-  facet_wrap(~racegrp) +
+  facet_wrap(~racegrp,
+             labeller = labeller(
+               racegrp = c("All" = "Combined"))) +
   geom_hline(yintercept = 1, linetype = "dashed", colour = "grey50") +
   geom_text(
     data = generation_bounds,
@@ -976,10 +982,10 @@ colorectal_cohort <- ggplot(colorectal_cohort_effects, aes(x = value.Coh, y = va
     size = 3.5,
     hjust = 0) +
   labs(title = "Cohort effect, colorectal", x = "Birth cohort", y = "Rate ratio") +
-  theme_classic() + 
-  scale_colour_manual(values = mycolours) + 
-  scale_fill_manual(values = mycolours_light) +
-  scale_linetype_manual(values = mylines) +
+  theme_classic() +
+  scale_colour_manual(values = mycolours, labels = c("All" = "Three ethnicities combined")) + 
+  scale_fill_manual(values = mycolours_light, labels = c("All" = "Three ethnicities combined")) +
+  scale_linetype_manual(values = mylines, labels = c("All" = "Three ethnicities combined")) +
   theme(text = element_text(face = "bold"),
         plot.title = element_text(margin = margin(b=10), size = 12),
         axis.title.y = element_text(margin = margin(r=10), size = 12),
@@ -1046,22 +1052,24 @@ breast_cohort_effects     <- set_race_levels(breast_cohort_effects)
 breast_age <-  ggplot(breast_age_effects, aes(x = value.Age, y = value.Rate, colour = racegrp, fill = racegrp, linetype = racegrp)) +
   geom_ribbon(aes(ymin = value.2.5., ymax = value.97.5.), colour = NA, alpha = 0.3) +
   geom_line(linewidth = 0.8) +
-  facet_wrap(~racegrp) +
+  facet_wrap(~racegrp,
+             labeller = labeller(
+               racegrp = c("All" = "Combined"))) +
   geom_vline(xintercept = menopause_age, linetype = "dashed", colour = "grey30") +
   annotate("text", x = menopause_age - 12, y = 240, 
            label = "< 49 years", size = 4) +
   annotate("text", x = menopause_age + 15, y = 240, 
-           label = "49+ years", size = 4) +
+           label = "\u226549 years", size = 4) +
   labs(title = "Age effect, breast", 
        x = "Age (years)", 
        y = "Incidence per 100,000",
        colour = "Ethnicity",
        linetype = "Ethnicity",
        fill = "Ethnicity") +
-  theme_classic() + 
-  scale_colour_manual(values = mycolours) + 
-  scale_fill_manual(values = mycolours_light) +
-  scale_linetype_manual(values = mylines) +
+  theme_classic() +
+  scale_colour_manual(values = mycolours, labels = c("All" = "Three ethnicities combined")) + 
+  scale_fill_manual(values = mycolours_light, labels = c("All" = "Three ethnicities combined")) +
+  scale_linetype_manual(values = mylines, labels = c("All" = "Three ethnicities combined")) +
   theme(text = element_text(face = "bold"),
         plot.title = element_text(margin = margin(b=10), size = 12),
         axis.title.y = element_text(margin = margin(r=10), size = 12),
@@ -1077,13 +1085,15 @@ breast_age <-  ggplot(breast_age_effects, aes(x = value.Age, y = value.Rate, col
 breast_period <- ggplot(breast_period_effects, aes(x = value.Per, y = value.P.RR, colour = racegrp, fill = racegrp, linetype = racegrp)) +
   geom_ribbon(aes(ymin = value.2.5., ymax = value.97.5.), colour = NA, alpha = 0.3) +
   geom_line(linewidth = 0.8) +
-  facet_wrap(~racegrp) +
+  facet_wrap(~racegrp,
+             labeller = labeller(
+               racegrp = c("All" = "Combined"))) +
   geom_hline(yintercept = 1, linetype = "dashed", colour = "grey50") +
   labs(title = "Period effect, breast", x = "Year", y = "Rate ratio") +
-  theme_classic() + 
-  scale_colour_manual(values = mycolours) + 
-  scale_fill_manual(values = mycolours_light) +
-  scale_linetype_manual(values = mylines) +
+  theme_classic() +
+  scale_colour_manual(values = mycolours, labels = c("All" = "Three ethnicities combined")) + 
+  scale_fill_manual(values = mycolours_light, labels = c("All" = "Three ethnicities combined")) +
+  scale_linetype_manual(values = mylines, labels = c("All" = "Three ethnicities combined")) +
   theme(text = element_text(face = "bold"),
         plot.title = element_text(margin = margin(b=10), size = 12),
         axis.title.y = element_text(margin = margin(r=10), size = 12),
@@ -1104,7 +1114,9 @@ breast_cohort <- ggplot(breast_cohort_effects, aes(x = value.Coh, y = value.C.RR
   scale_x_continuous(breaks = c(1890, 1910, 1930, 1950, 1970, 1990)) +
   geom_ribbon(aes(ymin = value.2.5., ymax = value.97.5.), colour = NA, alpha = 0.3) +
   geom_line(linewidth = 0.8) +
-  facet_wrap(~racegrp) +
+  facet_wrap(~racegrp,
+             labeller = labeller(
+               racegrp = c("All" = "Combined"))) +
   geom_hline(yintercept = 1, linetype = "dashed", colour = "grey50") +
   ylim(0, 4) +
   geom_text(
@@ -1115,10 +1127,10 @@ breast_cohort <- ggplot(breast_cohort_effects, aes(x = value.Coh, y = value.C.RR
     size = 3.5,
     hjust = 0)+
   labs(title = "Cohort effect, breast", x = "Birth cohort", y = "Rate ratio") +
-  theme_classic() + 
-  scale_colour_manual(values = mycolours) + 
-  scale_fill_manual(values = mycolours_light) +
-  scale_linetype_manual(values = mylines) +
+  theme_classic() +
+  scale_colour_manual(values = mycolours, labels = c("All" = "Three ethnicities combined")) + 
+  scale_fill_manual(values = mycolours_light, labels = c("All" = "Three ethnicities combined")) +
+  scale_linetype_manual(values = mylines, labels = c("All" = "Three ethnicities combined")) +
   theme(text = element_text(face = "bold"),
         plot.title = element_text(margin = margin(b=10), size = 12),
         axis.title.y = element_text(margin = margin(r=10), size = 12),
@@ -1325,22 +1337,22 @@ all_anova_4 <- all_anova_4 %>%
 ## the reference period and 1890 as the reference cohort. 
 
 table1_imp1 <- all_anova_1 %>%
-  left_join(dispersion_all %>% select(site, racegrp, chisq_df = dispersion_ratio, resid_df = df),
+  left_join(dispersion_all_1 %>% select(site, racegrp, chisq_df = dispersion_ratio, resid_df = df),
             by = c("site", "racegrp")) %>%
   select(site, racegrp, Model, `H0      `, AIC, `Mod. df.`, `Mod. dev.`, `Test df.`, `Test dev.`,
          `Pr(>Chi)`, p_BH_poisson, phi, F_adj, p_adj, p_adj_BH, chisq_df, resid_df)
 table1_imp2 <- all_anova_2 %>%
-  left_join(dispersion_all %>% select(site, racegrp, chisq_df = dispersion_ratio, resid_df = df),
+  left_join(dispersion_all_2 %>% select(site, racegrp, chisq_df = dispersion_ratio, resid_df = df),
             by = c("site", "racegrp")) %>%
   select(site, racegrp, Model, `H0      `, AIC, `Mod. df.`, `Mod. dev.`, `Test df.`, `Test dev.`,
          `Pr(>Chi)`, p_BH_poisson, phi, F_adj, p_adj, p_adj_BH, chisq_df, resid_df)
 table1_imp3 <- all_anova_3 %>%
-  left_join(dispersion_all %>% select(site, racegrp, chisq_df = dispersion_ratio, resid_df = df),
+  left_join(dispersion_all_3 %>% select(site, racegrp, chisq_df = dispersion_ratio, resid_df = df),
             by = c("site", "racegrp")) %>%
   select(site, racegrp, Model, `H0      `, AIC, `Mod. df.`, `Mod. dev.`, `Test df.`, `Test dev.`,
          `Pr(>Chi)`, p_BH_poisson, phi, F_adj, p_adj, p_adj_BH, chisq_df, resid_df)
 table1_imp4 <- all_anova_4 %>%
-  left_join(dispersion_all %>% select(site, racegrp, chisq_df = dispersion_ratio, resid_df = df),
+  left_join(dispersion_all_4 %>% select(site, racegrp, chisq_df = dispersion_ratio, resid_df = df),
             by = c("site", "racegrp")) %>%
   select(site, racegrp, Model, `H0      `, AIC, `Mod. df.`, `Mod. dev.`, `Test df.`, `Test dev.`,
          `Pr(>Chi)`, p_BH_poisson, phi, F_adj, p_adj, p_adj_BH, chisq_df, resid_df)
@@ -1459,7 +1471,6 @@ plot_meno <- function(df, facet = FALSE) {
   p
 }
 
-# Main figure: all three ethnicities combined
 plot_meno(all_pred %>% filter(racegrp == "All"))
 ggsave("../results/pre_vs_post_cohort_effects.pdf", width = 8, height = 6)
 dev.off()
