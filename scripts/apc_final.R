@@ -303,6 +303,7 @@ asr_summary_3 <- data %>%
     bind_cols(grp_name, result)
   })
 asr_summary_3 <- set_race_levels(asr_summary_3)
+write.csv(asr_summary_3, "../results/asr_summary_3_final.csv", row.names = F)
 
 asr_summary_4 <- data %>%
   group_by(site, racegrp, period_mid) %>%
@@ -378,6 +379,7 @@ breast_stand_smooth <- function(df) {
           axis.line = element_line(linewidth = 1),
           axis.ticks = element_line(linewidth = 1),
           legend.text = element_text(size = 12),
+          legend.title = element_text(size = 12, vjust = 0.8),
           plot.title = element_text(hjust = 0.5),
           plot.margin = margin(t = 25))
 }
@@ -408,6 +410,7 @@ colo_stand_smooth <- function(df) {
           axis.line = element_line(linewidth = 1),
           axis.ticks = element_line(linewidth = 1),
           legend.text = element_text(size = 12),
+          legend.title = element_text(size = 12, vjust = 0.8),
           plot.title = element_text(hjust = 0.5),
           plot.margin = margin(t = 25, r = 5))
 }
@@ -557,6 +560,7 @@ age_spec_smooth_colo <- function(df) {
           axis.line = element_line(linewidth = 1),
           axis.ticks = element_line(linewidth = 1),
           legend.text = element_text(size = 12),
+          legend.title = element_text(size = 12, vjust = 0.8),
           plot.title = element_text(hjust = 0.5))
 }
 
@@ -581,6 +585,7 @@ age_spec_smooth_breast <- function(df) {
           axis.line = element_line(linewidth = 1),
           axis.ticks = element_line(linewidth = 1),
           legend.text = element_text(size = 12),
+          legend.title = element_text(size = 12, vjust = 0.8),
           plot.title = element_text(hjust = 0.5))
 }
 
@@ -682,6 +687,7 @@ plot_age_spec_colo <- function(df) {
           axis.line = element_line(linewidth = 1),
           axis.ticks = element_line(linewidth = 1),
           legend.text = element_text(size = 12),
+          legend.title = element_text(size = 12, vjust = 0.8),
           legend.key.width = unit(2.5, "cm"),
           plot.title = element_text(hjust = 0.5))
 }
@@ -706,7 +712,7 @@ plot_age_spec_breast <- function(df) {
           axis.line = element_line(linewidth = 1),
           axis.ticks = element_line(linewidth = 1),
           legend.text = element_text(size = 12),
-          legend.title = element_text(vjust = 0.8),
+          legend.title = element_text(size = 12, vjust = 0.8),
           legend.key.width = unit(2.5, "cm"))
 }
 
@@ -933,7 +939,8 @@ colorectal_age <-  ggplot(colorectal_age_effects, aes(x = value.Age, y = value.R
         axis.ticks.length = unit(0.2, "cm"),
         axis.line = element_line(linewidth = 1),
         axis.ticks = element_line(linewidth = 1),
-        legend.text = element_text(size = 11))
+        legend.text = element_text(size = 11),
+        legend.title = element_text(size = 11, vjust = 0.8))
 
 ### plot colorectal cancer period effects
 # Colorectal period effect: rate ratio relative to ref_period, faceted by ethnicity
@@ -958,6 +965,7 @@ colorectal_period <- ggplot(colorectal_period_effects, aes(x = value.Per, y = va
         axis.line = element_line(linewidth = 1),
         axis.ticks = element_line(linewidth = 1),
         legend.text = element_text(size = 11),
+        legend.title = element_text(size = 11, vjust = 0.8),
         axis.text.x = element_text(hjust = 1, angle = 45)) 
 
 ### plot colorectal cancer cohort effects
@@ -995,6 +1003,7 @@ colorectal_cohort <- ggplot(colorectal_cohort_effects, aes(x = value.Coh, y = va
         axis.line = element_line(linewidth = 1),
         axis.ticks = element_line(linewidth = 1),
         legend.text = element_text(size = 11),
+        legend.title = element_text(size = 11, vjust = 0.8),
         plot.margin = margin(r = 10),
         axis.text.x = element_text(hjust = 1, angle = 45))
 
@@ -1078,7 +1087,8 @@ breast_age <-  ggplot(breast_age_effects, aes(x = value.Age, y = value.Rate, col
         axis.ticks.length = unit(0.2, "cm"),
         axis.line = element_line(linewidth = 1),
         axis.ticks = element_line(linewidth = 1),
-        legend.text = element_text(size = 11))
+        legend.text = element_text(size = 11),
+        legend.title = element_text(size = 11, vjust = 0.8))
 
 ### plot breast cancer period effects
 # Breast period effect: rate ratio relative to ref_period, faceted by ethnicity
@@ -1103,6 +1113,7 @@ breast_period <- ggplot(breast_period_effects, aes(x = value.Per, y = value.P.RR
         axis.line = element_line(linewidth = 1),
         axis.ticks = element_line(linewidth = 1),
         legend.text = element_text(size = 11),
+        legend.title = element_text(size = 11, vjust = 0.8),
         axis.text.x = element_text(hjust = 1, angle = 45)) 
 
 ### plot breast cancer cohort effects
@@ -1140,6 +1151,7 @@ breast_cohort <- ggplot(breast_cohort_effects, aes(x = value.Coh, y = value.C.RR
         axis.line = element_line(linewidth = 1),
         axis.ticks = element_line(linewidth = 1),
         legend.text = element_text(size = 11),
+        legend.title = element_text(size = 11, vjust = 0.8),
         plot.margin = margin(r = 10),
         axis.text.x = element_text(hjust = 1, angle = 45))
 
@@ -1396,11 +1408,21 @@ fit_meno_models <- function(race) {
     mutate(menopause_grp = factor(if_else(age_mid < 49, "pre", "post"), levels = c("pre", "post")),
            log_pop = log(pop))
   
-  no_meno <- glm(n3 ~ ns(cohort_mid, df = 5) + ns(age_mid, df = 5),
-                 offset = log_pop, family = quasipoisson, data = d)
-  with_meno <- glm(n3 ~ ns(cohort_mid, df = 5) * menopause_grp + ns(age_mid, df = 5),
-                   offset = log_pop, family = quasipoisson, data = d)
+  no_meno <- glm(
+    n3 ~ ns(cohort_mid, df = 5) + menopause_grp +
+      ns(age_mid, df = 5),
+    offset = log_pop,
+    family = quasipoisson(link = "log"),
+    data = d
+  )
   
+  with_meno <- glm(
+    n3 ~ ns(cohort_mid, df = 5) * menopause_grp +
+      ns(age_mid, df = 5),
+    offset = log_pop,
+    family = quasipoisson(link = "log"),
+    data = d
+  )
   list(data = d, no_meno = no_meno, with_meno = with_meno)
 }
 
@@ -1474,6 +1496,13 @@ plot_meno <- function(df, facet = FALSE) {
 plot_meno(all_pred %>% filter(racegrp == "All"))
 ggsave("../results/pre_vs_post_cohort_effects.pdf", width = 8, height = 6)
 dev.off()
+
+## F tests
+for (r in names(meno_fits)) {
+  print(r)
+  print(anova(meno_fits[[r]]$no_meno, meno_fits[[r]]$with_meno, test = "F"))
+}
+
 
 ## -----------------------------------------------------------------------------
 ## 12. EXPLAIN DF DIFFERENCES BETWEEN CANCERS
