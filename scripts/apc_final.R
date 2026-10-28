@@ -2,9 +2,19 @@
 ## Comparative age–period–cohort analysis reveals divergent temporal trajectories 
 ## of breast and colorectal cancer among women in Singapore
 ## ==============================================================================
+##
+## REVISION NOTES (response to reviewer comments on denominators and zero-case cells)
+##  1. Person-years are built from the population file for EVERY age x period cell and merged onto a
+##     complete site x ethnicity x period x age grid (12 age groups x 11 periods = 132 cells per group).
+##     Cells absent from the case extract are set to zero cases. Cells reported as "<5" keep the
+##     imputed values (n1-n4), so true zeros and suppressed cells are tracked separately (cell_status).
+##  2. "All" (three ethnicities combined) is aggregated AFTER zero-filling.
+##  3. Segi weights are std_pop / 100,000 (full Segi total population), as in the published ASRs.
+##  4. New Section 5b: tables of cases, person-years and ASR by ethnicity (overall and by period).
 ## -----------------------------------------------------------------------------
 ## 0. SETUP: install/load packages, register fonts
 ## -----------------------------------------------------------------------------
+
 
 # Install and load packages
 required_packages <- list("dplyr", "splines", "tidyr", "ggplot2", "Epi", "stringr", 
@@ -38,6 +48,7 @@ library(purrr)
 ## 1. LOAD AND CLEAN CANCER INCIDENCE DATA
 ## -----------------------------------------------------------------------------
 
+
 # Load and clean cancer incidence data
 cancer <- read.csv("../data/cancer.csv", stringsAsFactors = T)
 
@@ -66,7 +77,8 @@ cancer_clean <- cancer_clean %>%
 
 ##  Rename incidence column to something easy to work with
 cancer_clean <- cancer_clean %>% 
-  rename(n = n..incidence.count.)
+  rename(n = n..incidence.count.) %>%
+  mutate(racegrp = as.character(racegrp), site = as.character(site))
 cancer_clean$n <- as.character(cancer_clean$n)
 
 ##  Create different incidence count columns where <5 incidences are resolved to different integers (1 through 4)
@@ -85,7 +97,8 @@ cancer_clean$n2 <- as.numeric(cancer_clean$n2)
 cancer_clean$n3 <- as.numeric(cancer_clean$n3)
 cancer_clean$n4 <- as.numeric(cancer_clean$n4)
 
-## Count number of imputed cells in the Indian population for CRC
+## Count number of imputed cells in the Indian population for CRC (as a share of the cells present in the extract;
+## the share of the complete grid is reported in Section 4)
 imputedIN <- subset(cancer_clean, racegrp == "IN"& n == "<5" & site == "Colon & rectum")
 totalIN <- subset(cancer_clean, racegrp == "IN"& site == "Colon & rectum")
 proportion_imputed <- count(imputedIN)/count(totalIN)*100
@@ -165,22 +178,9 @@ colo_byrace
 cancer_clean <- cancer_clean %>%
   filter(racegrp != "XX")
 
-## Add rows for overall data across the 3 ethnicities
-overall_data <- cancer_clean %>%
-  group_by(age_mid, period_mid, age_start, age_end, period_start, period_end, agedxgrp, period, site, sex) %>%
-  summarise(n1 = sum(n1),
-            n2 = sum(n2),
-            n3 = sum(n3),
-            n4 = sum(n4),
-            .groups = "drop")
-overall_data$racegrp <- "All"
-cancer_clean <- bind_rows(cancer_clean, overall_data)
-
-## Derive cohort midpoints
-###   cohort = period - age, using midpoints since interval widths match (5-yr both)
-cancer_clean <- cancer_clean %>%
-  mutate(cohort_mid = period_mid - age_mid)
-cancer_clean$cohort_mid <- as.numeric(cancer_clean$cohort_mid)
+## NOTE: the "All" (three ethnicities combined) rows and the cohort midpoints are now created in
+## Section 4, AFTER the complete age x period grid has been built and missing cells set to zero.
+## (Aggregating here would only sum the cells present in the case extract.)
 
 
 ## -----------------------------------------------------------------------------
@@ -199,26 +199,120 @@ pop <- pop %>%
 pop_clean <- pop %>%
   filter(age_start >= 25 & age_start <= 80, sex == "F", year <= 2022, racegrp != "XX")
 
-## Assign populations to year periods in cancer_clean
-# (join each single calendar year of population data to the 5-year period it falls within)
+## Lookups for the 12 five-year age groups (25-29 ... 80-84) and 11 five-year periods (1968-72 ... 2018-22)
+age_lookup <- cancer_clean %>%
+  distinct(agedxgrp, age_start, age_end, age_mid) %>%
+  arrange(age_start)
 period_lookup <- cancer_clean %>%
-  distinct(period, period_start, period_end)
-pop_clean <- left_join(pop_clean, period_lookup, by = join_by(year >= period_start, year <= period_end))
+  distinct(period, period_start, period_end, period_mid) %>%
+  arrange(period_start)
+stopifnot("Expected 12 age groups (25-29 ... 80-84)" = nrow(age_lookup) == 12,
+          "Expected 11 five-year periods (1968-1972 ... 2018-2022)" = nrow(period_lookup) == 11)
 
-## Calculate overall population data across the three ethnicities
-all_pop <- pop_clean %>%
-  group_by(year, sex, agedxgrp, age_start, period, period_start, period_end) %>%
-  summarise (population = sum(population),
-             .groups = "drop")
+## Assign populations to year periods
+# (join each single calendar year of population data to the 5-year period it falls within)
+pop_clean <- pop_clean %>%
+  mutate(racegrp = as.character(racegrp)) %>%
+  left_join(period_lookup, by = join_by(year >= period_start, year <= period_end)) %>%
+  filter(!is.na(period))
 
-## Add overall data to population dataset
-all_pop$racegrp <- "All"
-pop_sum <- bind_rows(pop_clean, all_pop) %>%
-  group_by(agedxgrp, racegrp, period, sex) %>%
+# Diagnostic: number of calendar years of population data feeding each period (expect 5 per period).
+# A period with fewer than 5 years would mean its person-years are understated.
+pop_clean %>% distinct(period, year) %>% count(period, name = "n_years") %>% print()
+
+## Person-years for EVERY age x period cell, by ethnicity.
+## The population file does not depend on the case extract, so no cell is lost here.
+## person-years = sum of the annual populations over the years in the period
+pop_3 <- pop_clean %>%
+  group_by(agedxgrp, racegrp, period) %>%
   summarise(pop = sum(population), .groups = "drop")
 
-## Join population data to incidence dataset
-data <- cancer_clean %>% left_join(pop_sum, by = c("period", "agedxgrp", "racegrp", "sex"))
+## Case counts actually present in the extract (one row per site x ethnicity x period x age group)
+sites_keep <- c("Breast", "Colon & rectum")
+races3     <- c("CN", "IN", "MY")
+
+if (anyNA(cancer_clean$n3)) warning("NA counts found in the case extract; they are treated as zero.")
+
+counts_extract <- cancer_clean %>%
+  filter(site %in% sites_keep, racegrp %in% races3) %>%
+  group_by(site, racegrp, period, agedxgrp) %>%
+  summarise(across(c(n1, n2, n3, n4), ~ sum(.x, na.rm = TRUE)),
+            suppressed = any(n == "<5", na.rm = TRUE),   # reported but suppressed (<5)
+            n_rows     = dplyr::n(),
+            .groups = "drop")
+
+## Every extract cell must have a matching population cell, otherwise cases would be dropped
+unmatched <- counts_extract %>% anti_join(pop_3, by = c("racegrp", "period", "agedxgrp"))
+stopifnot("Case cells with no matching population cell - check age/period labels" = nrow(unmatched) == 0)
+
+## COMPLETE GRID: site x ethnicity x period x age group (2 x 3 x 11 x 12 = 792 cells).
+## Cells absent from the case extract are TRUE zero-case cells and are set to 0 in n1-n4.
+## Cells reported as "<5" keep their imputed values (n1-n4 = 1,2,3,4), as before.
+grid3 <- pop_3 %>%
+  tidyr::crossing(site = sites_keep) %>%
+  left_join(age_lookup,    by = "agedxgrp") %>%
+  left_join(period_lookup, by = "period") %>%
+  left_join(counts_extract, by = c("site", "racegrp", "period", "agedxgrp")) %>%
+  mutate(
+    cell_status = case_when(is.na(n_rows) ~ "absent (set to 0)",
+                            suppressed    ~ "suppressed <5",
+                            TRUE          ~ "reported"),
+    across(c(n1, n2, n3, n4), ~ replace_na(.x, 0)),
+    sex = "F"
+  ) %>%
+  select(-n_rows, -suppressed)
+
+## Completeness checks
+stopifnot(
+  "Grid is not complete (expected 792 cells)" = nrow(grid3) == length(sites_keep) * length(races3) * 12 * 11,
+  "Missing age/period labels in grid"         = !anyNA(grid3$age_mid) && !anyNA(grid3$period_mid),
+  "Missing or zero person-years in grid"      = !anyNA(grid3$pop) && all(grid3$pop > 0),
+  "Case totals changed when building the grid" = isTRUE(all.equal(sum(grid3$n3), sum(counts_extract$n3)))
+)
+
+## Summary of cell status by site x ethnicity (true zeros vs suppressed vs reported)
+cell_status_tbl <- grid3 %>%
+  group_by(site, racegrp) %>%
+  summarise(cells_total       = dplyr::n(),
+            cells_reported    = sum(cell_status == "reported"),
+            cells_suppressed  = sum(cell_status == "suppressed <5"),
+            cells_zero_filled = sum(cell_status == "absent (set to 0)"),
+            .groups = "drop")
+cell_status_all <- bind_rows(
+  cell_status_tbl,
+  cell_status_tbl %>%
+    group_by(site) %>%
+    summarise(across(starts_with("cells_"), sum), .groups = "drop") %>%
+    mutate(racegrp = "All")
+)
+write.csv(cell_status_all, "../results/cell_status_by_group.csv", row.names = FALSE)
+cell_status_all
+
+## Proportion of Indian CRC cells that are suppressed, out of the COMPLETE 132-cell grid
+## (the Section 1 figure uses only the cells present in the extract)
+grid3 %>%
+  filter(site == "Colon & rectum", racegrp == "IN") %>%
+  summarise(n_cells = dplyr::n(),
+            n_suppressed = sum(cell_status == "suppressed <5"),
+            n_zero_filled = sum(cell_status == "absent (set to 0)"),
+            pct_suppressed = n_suppressed / n_cells * 100)
+
+## Add rows for the three ethnicities combined ("All"): sum of the three zero-filled grids,
+## so counts and person-years cover the same cells
+overall_data <- grid3 %>%
+  group_by(site, period, period_start, period_end, period_mid,
+           agedxgrp, age_start, age_end, age_mid, sex) %>%
+  summarise(across(c(n1, n2, n3, n4, pop), sum), .groups = "drop") %>%
+  mutate(racegrp = "All", cell_status = "aggregate")
+
+## Final analysis dataset: complete grid for CN, IN, MY and All, with cohort midpoints
+## cohort = period - age, using midpoints since interval widths match (5-yr both)
+data <- bind_rows(grid3, overall_data) %>%
+  mutate(cohort_mid = as.numeric(period_mid - age_mid))
+
+stopifnot("Each site x ethnicity group must have 132 cells" =
+            all(count(data, site, racegrp)$n == 12 * 11))
+
 
 ## -----------------------------------------------------------------------------
 ## 5. AGE-STANDARDISED INCIDENCE RATES (ASR) BY PERIOD, STRATIFIED BY ETHNICITY
@@ -230,7 +324,10 @@ data <- cancer_clean %>% left_join(pop_sum, by = c("period", "agedxgrp", "racegr
 # Helper: fix the display order of ethnicity groups (used consistently across all plots below)
 set_race_levels <- function(df) df %>% mutate(racegrp = factor(racegrp, levels = c("All", "IN", "MY", "CN")))
 
-# SEGI world standard population weights, by 5-year age band, used for direct age-standardisation
+# SEGI world standard population, by 5-year age band, used for direct age-standardisation.
+# Weights are std_pop / 100,000 (the full Segi total, ages 0-85+), so ASRs are comparable with published rates.
+# Only ages 25-84 are analysed, so the ASR assumes no cases outside this range and may be marginally lower
+# than an all-age ASR (check against published all-age rates, especially CRC at 85+).
 segi_std <- tibble(
   age_start = c(0, seq(5, 85, by = 5)),
   std_pop = c(12000, 10000, 9000, 9000, 8000, 8000, 6000, 6000, 6000, 6000, 
@@ -240,12 +337,12 @@ segi_std <- tibble(
 # Compute a directly age-standardised rate with gamma-distribution confidence intervals
 compute_asr <- function(count, pop, stdpop, conf.level = 0.95) {
   rate <- count / pop
-  weight <- stdpop / 100000   
+  weight <- stdpop / 100000   # weights relative to the full Segi total population (100,000)   
   y <- sum(weight * rate)
   v <- sum((weight^2) * (count / pop^2))
   wM <- max(weight / pop)
   alpha <- 1 - conf.level
-  lci <- qgamma(alpha/2, shape = y^2/v, rate = y/v)
+  lci <- if (y == 0) 0 else qgamma(alpha/2, shape = y^2/v, rate = y/v)
   uci <- qgamma(1 - alpha/2, 
                 shape = (y + wM)^2 / (v + wM^2), 
                 rate  = (y + wM)  / (v + wM^2) )
@@ -256,6 +353,8 @@ compute_asr <- function(count, pop, stdpop, conf.level = 0.95) {
 apply_asr <- function(df, df_call_n) {
   df <- df %>% 
     left_join(segi_std, by = "age_start")
+  # every group must contain all 12 age bands (zero-filled grid) with positive person-years
+  stopifnot(nrow(df) == 12, !anyNA(df$std_pop), !anyNA(df$pop), all(df$pop > 0))
   
   
   result <- compute_asr(
@@ -303,7 +402,6 @@ asr_summary_3 <- data %>%
     bind_cols(grp_name, result)
   })
 asr_summary_3 <- set_race_levels(asr_summary_3)
-write.csv(asr_summary_3, "../results/asr_summary_3_final.csv", row.names = F)
 
 asr_summary_4 <- data %>%
   group_by(site, racegrp, period_mid) %>%
@@ -364,7 +462,7 @@ breast_stand_smooth <- function(df) {
     scale_colour_manual(values = mycolours, labels = c("All" = "Three ethnicities combined")) +
     scale_linetype_manual(values = mylines, labels = c("All" = "Three ethnicities combined")) +
     scale_fill_manual(values = mycolours_light, labels = c("All" = "Three ethnicities combined")) +
-    ylim(0,110) +
+    expand_limits(y = 0) +
     labs(x = "Year", 
          y = "Breast cancer ASR",
          colour = "Ethnicity",
@@ -379,7 +477,6 @@ breast_stand_smooth <- function(df) {
           axis.line = element_line(linewidth = 1),
           axis.ticks = element_line(linewidth = 1),
           legend.text = element_text(size = 12),
-          legend.title = element_text(size = 12, vjust = 0.8),
           plot.title = element_text(hjust = 0.5),
           plot.margin = margin(t = 25))
 }
@@ -395,7 +492,7 @@ colo_stand_smooth <- function(df) {
     scale_colour_manual(values = mycolours, labels = c("All" = "Three ethnicities combined")) +
     scale_linetype_manual(values = mylines, labels = c("All" = "Three ethnicities combined")) +
     scale_fill_manual(values = mycolours_light, labels = c("All" = "Three ethnicities combined")) +
-    ylim(0,110) +
+    expand_limits(y = 0) +
     labs(x = "Year", 
          y = "Colorectal cancer ASR",
          colour = "Ethnicity",
@@ -410,7 +507,6 @@ colo_stand_smooth <- function(df) {
           axis.line = element_line(linewidth = 1),
           axis.ticks = element_line(linewidth = 1),
           legend.text = element_text(size = 12),
-          legend.title = element_text(size = 12, vjust = 0.8),
           plot.title = element_text(hjust = 0.5),
           plot.margin = margin(t = 25, r = 5))
 }
@@ -457,8 +553,8 @@ dev.off()
 ## smoothing, span = 0.75; shading indicates 95% confidence intervals around fitted Loess curves.
 
 # Use imputation value 3 (i.e. n3, <5 counts -> 3) as the main analysis
-breast_stand <- breast_stand_smooth_3 + ylim(0,90)
-colo_stand <- colo_stand_smooth_3 + ylim(0,90)
+breast_stand <- breast_stand_smooth_3
+colo_stand <- colo_stand_smooth_3
 ggarrange(breast_stand, NULL, colo_stand,
           labels = c("a)", "", "b)"),
           widths = c(1, 0.1, 1),
@@ -467,6 +563,90 @@ ggarrange(breast_stand, NULL, colo_stand,
           common.legend = T)
 ggsave("../results/ASR_smoothed.pdf", width = 8, height = 4.5)
 dev.off()
+
+
+## -----------------------------------------------------------------------------
+## 5b. TABLES: CASES, POPULATION AND AGE-STANDARDISED RATES BY ETHNICITY
+## -----------------------------------------------------------------------------
+## Raw percentages of cases by ethnicity do not show relative risk, because the groups differ in
+## population size and age structure. These tables give cases, person-years and Segi-standardised
+## rates side by side. All counts use imputed value 3 for "<5" cells (main analysis); missing
+## cells are zero; Segi weights are std_pop / 100,000 (full Segi total; ages outside 25-84 are not analysed).
+## ASR = per 100,000 person-years, 95% CI by the gamma method (Fay & Feuer).
+
+race_label <- c(CN = "Chinese", IN = "Indian", MY = "Malay", All = "Three ethnicities combined")
+n_years_total <- n_distinct(pop_clean$year)   # calendar years of population data in the study period
+
+## (a) Whole study period (1968-2022): pool cases and person-years within each age band,
+##     then standardise the pooled age-specific rates
+pooled_cells <- data %>%
+  group_by(site, racegrp, age_start) %>%
+  summarise(n3 = sum(n3), pop = sum(pop), .groups = "drop")
+
+asr_overall <- pooled_cells %>%
+  group_by(site, racegrp) %>%
+  group_split() %>%
+  map_dfr(function(df_group) {
+    grp_name <- df_group %>% select(site, racegrp) %>% slice(1)
+    bind_cols(grp_name, apply_asr(df_group, df_group$n3))
+  })
+
+table_cases_pop_asr <- asr_overall %>%
+  left_join(cell_status_all %>% select(site, racegrp, cells_suppressed, cells_zero_filled),
+            by = c("site", "racegrp")) %>%
+  group_by(site) %>%
+  mutate(pct_of_cases = 100 * total_count / total_count[racegrp == "All"]) %>%
+  ungroup() %>%
+  mutate(racegrp = factor(racegrp, levels = c("CN", "IN", "MY", "All"))) %>%
+  arrange(site, racegrp) %>%
+  transmute(
+    Site                     = site,
+    Ethnicity                = unname(race_label[as.character(racegrp)]),
+    Cases                    = total_count,
+    `% of cases`             = round(pct_of_cases, 1),
+    `Person-years`           = total_pop,
+    `Mean annual population` = round(total_pop / n_years_total),
+    `Crude rate per 100,000` = round(total_count / total_pop * 1e5, 1),
+    `ASR per 100,000`        = round(as.numeric(value), 1),
+    `ASR 95% CI`             = sprintf("%.1f-%.1f", lowercl, uppercl),
+    `Suppressed (<5) cells`  = cells_suppressed,
+    `Zero-filled cells`      = cells_zero_filled
+  )
+print(table_cases_pop_asr, n = Inf, width = Inf)
+write.csv(table_cases_pop_asr, "../results/Table_cases_population_ASR.csv", row.names = FALSE)
+
+## (b) Same quantities for each 5-year period (uses the per-period ASRs from Section 5)
+table_by_period <- asr_summary_3 %>%
+  left_join(period_lookup %>% select(period, period_mid), by = "period_mid") %>%
+  mutate(racegrp = factor(as.character(racegrp), levels = c("CN", "IN", "MY", "All"))) %>%
+  arrange(site, racegrp, period_mid) %>%
+  transmute(
+    Site                     = site,
+    Ethnicity                = unname(race_label[as.character(racegrp)]),
+    Period                   = period,
+    Cases                    = total_count,
+    `Person-years`           = total_pop,
+    `Crude rate per 100,000` = round(total_count / total_pop * 1e5, 1),
+    `ASR per 100,000`        = round(as.numeric(value), 1),
+    `ASR 95% CI`             = sprintf("%.1f-%.1f", lowercl, uppercl)
+  )
+write.csv(table_by_period, "../results/Table_cases_population_ASR_by_period.csv", row.names = FALSE)
+
+## (c) Person-years by ethnicity and period (replacement for Supplementary Table S1).
+##     The denominators are now built from the full population grid, so they are identical
+##     for breast and colorectal cancer.
+py_check <- data %>%
+  group_by(site, racegrp, period, period_mid) %>%
+  summarise(py = sum(pop), .groups = "drop") %>%
+  pivot_wider(names_from = site, values_from = py)
+stopifnot("Breast and CRC denominators differ" = all(py_check$Breast == py_check$`Colon & rectum`))
+
+table_S1_person_years <- py_check %>%
+  select(period, period_mid, racegrp, person_years = Breast) %>%
+  pivot_wider(names_from = racegrp, values_from = person_years) %>%
+  arrange(period_mid) %>%
+  select(Period = period, Chinese = CN, Indian = IN, Malay = MY, Combined = All)
+write.csv(table_S1_person_years, "../results/Table_S1_person_years.csv", row.names = FALSE)
 
 
 ## -----------------------------------------------------------------------------
@@ -560,7 +740,6 @@ age_spec_smooth_colo <- function(df) {
           axis.line = element_line(linewidth = 1),
           axis.ticks = element_line(linewidth = 1),
           legend.text = element_text(size = 12),
-          legend.title = element_text(size = 12, vjust = 0.8),
           plot.title = element_text(hjust = 0.5))
 }
 
@@ -585,7 +764,6 @@ age_spec_smooth_breast <- function(df) {
           axis.line = element_line(linewidth = 1),
           axis.ticks = element_line(linewidth = 1),
           legend.text = element_text(size = 12),
-          legend.title = element_text(size = 12, vjust = 0.8),
           plot.title = element_text(hjust = 0.5))
 }
 
@@ -593,7 +771,10 @@ age_spec_smooth_colo_3 <- age_spec_smooth_colo(age_spec_colo_3)
 age_spec_smooth_breast_3 <- age_spec_smooth_breast(age_spec_breast_3)
 
 
-ggarrange(age_spec_smooth_breast_3, age_spec_smooth_colo_3, ncol = 2, nrow = 1, common.legend = T)
+ggarrange(age_spec_smooth_breast_3, age_spec_smooth_colo_3,
+          labels = c("a)", "b)"),
+          font.label = list(size = 14, color = "black", face = "bold"),
+          ncol = 2, nrow = 1, common.legend = T)
 ggsave("../results/smooth_age_specific_rate_with_age.pdf", width = 8.5, height = 5)
 dev.off()
 
@@ -687,7 +868,6 @@ plot_age_spec_colo <- function(df) {
           axis.line = element_line(linewidth = 1),
           axis.ticks = element_line(linewidth = 1),
           legend.text = element_text(size = 12),
-          legend.title = element_text(size = 12, vjust = 0.8),
           legend.key.width = unit(2.5, "cm"),
           plot.title = element_text(hjust = 0.5))
 }
@@ -712,7 +892,7 @@ plot_age_spec_breast <- function(df) {
           axis.line = element_line(linewidth = 1),
           axis.ticks = element_line(linewidth = 1),
           legend.text = element_text(size = 12),
-          legend.title = element_text(size = 12, vjust = 0.8),
+          legend.title = element_text(vjust = 0.8),
           legend.key.width = unit(2.5, "cm"))
 }
 
@@ -724,7 +904,10 @@ age_spec_breast_overyears_plot <- plot_age_spec_breast(age_spec_breast_overyears
 ## groups; curves were smoothed with Loess smoothing, span = 0.75; shading indicates 95% confi-dence 
 ## intervals around fitted Loess curves.
 
-ggarrange(age_spec_breast_overyears_plot, age_spec_colo_overyears_plot, ncol = 2, nrow = 1, common.legend = T)
+ggarrange(age_spec_breast_overyears_plot, age_spec_colo_overyears_plot,
+          labels = c("a)", "b)"),
+          font.label = list(size = 14, color = "black", face = "bold"),
+          ncol = 2, nrow = 1, common.legend = T)
 ggsave("../results/smooth_age_specific_rate_overtheyears.pdf", width = 9.5, height = 5.5)
 dev.off()
 
@@ -920,7 +1103,7 @@ colorectal_age <-  ggplot(colorectal_age_effects, aes(x = value.Age, y = value.R
   annotate("text", x = menopause_age - 12, y = 1100, 
            label = "< 49 years", size = 4) +
   annotate("text", x = menopause_age + 15, y = 1100, 
-           label = "\u226549 years", size = 4) +
+           label = "\u2265 49 years", size = 4) +
   labs(title = "Age effect, colorectal", 
        x = "Age (years)", 
        y = "Incidence per 100,000",
@@ -939,8 +1122,7 @@ colorectal_age <-  ggplot(colorectal_age_effects, aes(x = value.Age, y = value.R
         axis.ticks.length = unit(0.2, "cm"),
         axis.line = element_line(linewidth = 1),
         axis.ticks = element_line(linewidth = 1),
-        legend.text = element_text(size = 11),
-        legend.title = element_text(size = 11, vjust = 0.8))
+        legend.text = element_text(size = 11))
 
 ### plot colorectal cancer period effects
 # Colorectal period effect: rate ratio relative to ref_period, faceted by ethnicity
@@ -965,7 +1147,6 @@ colorectal_period <- ggplot(colorectal_period_effects, aes(x = value.Per, y = va
         axis.line = element_line(linewidth = 1),
         axis.ticks = element_line(linewidth = 1),
         legend.text = element_text(size = 11),
-        legend.title = element_text(size = 11, vjust = 0.8),
         axis.text.x = element_text(hjust = 1, angle = 45)) 
 
 ### plot colorectal cancer cohort effects
@@ -1003,7 +1184,6 @@ colorectal_cohort <- ggplot(colorectal_cohort_effects, aes(x = value.Coh, y = va
         axis.line = element_line(linewidth = 1),
         axis.ticks = element_line(linewidth = 1),
         legend.text = element_text(size = 11),
-        legend.title = element_text(size = 11, vjust = 0.8),
         plot.margin = margin(r = 10),
         axis.text.x = element_text(hjust = 1, angle = 45))
 
@@ -1068,7 +1248,7 @@ breast_age <-  ggplot(breast_age_effects, aes(x = value.Age, y = value.Rate, col
   annotate("text", x = menopause_age - 12, y = 240, 
            label = "< 49 years", size = 4) +
   annotate("text", x = menopause_age + 15, y = 240, 
-           label = "\u226549 years", size = 4) +
+           label = "\u2265 49 years", size = 4) +
   labs(title = "Age effect, breast", 
        x = "Age (years)", 
        y = "Incidence per 100,000",
@@ -1087,8 +1267,7 @@ breast_age <-  ggplot(breast_age_effects, aes(x = value.Age, y = value.Rate, col
         axis.ticks.length = unit(0.2, "cm"),
         axis.line = element_line(linewidth = 1),
         axis.ticks = element_line(linewidth = 1),
-        legend.text = element_text(size = 11),
-        legend.title = element_text(size = 11, vjust = 0.8))
+        legend.text = element_text(size = 11))
 
 ### plot breast cancer period effects
 # Breast period effect: rate ratio relative to ref_period, faceted by ethnicity
@@ -1113,7 +1292,6 @@ breast_period <- ggplot(breast_period_effects, aes(x = value.Per, y = value.P.RR
         axis.line = element_line(linewidth = 1),
         axis.ticks = element_line(linewidth = 1),
         legend.text = element_text(size = 11),
-        legend.title = element_text(size = 11, vjust = 0.8),
         axis.text.x = element_text(hjust = 1, angle = 45)) 
 
 ### plot breast cancer cohort effects
@@ -1151,7 +1329,6 @@ breast_cohort <- ggplot(breast_cohort_effects, aes(x = value.Coh, y = value.C.RR
         axis.line = element_line(linewidth = 1),
         axis.ticks = element_line(linewidth = 1),
         legend.text = element_text(size = 11),
-        legend.title = element_text(size = 11, vjust = 0.8),
         plot.margin = margin(r = 10),
         axis.text.x = element_text(hjust = 1, angle = 45))
 
@@ -1174,7 +1351,7 @@ ggarrange(breast_age, colorectal_age,
           labels = plot_labels,
           font.label = list(size = 14, color = "black", face = "bold"))
 ggsave("../results/component_effects.pdf",
-       width = 10, height = 15)
+       width = 10, height = 15, device = cairo_pdf)   # cairo_pdf so the \u2265 symbol renders
 dev.off()
 
 
@@ -1423,6 +1600,7 @@ fit_meno_models <- function(race) {
     family = quasipoisson(link = "log"),
     data = d
   )
+  
   list(data = d, no_meno = no_meno, with_meno = with_meno)
 }
 
@@ -1474,9 +1652,9 @@ plot_meno <- function(df, facet = FALSE) {
     geom_line(linewidth = 1) +
     theme_classic() +
     scale_colour_manual(values = c("pre" = "#F8766D", "post" = "#00BFC4"),
-                        labels = c("pre" = "Under 49", "post" = "49 +")) +
+                        labels = c("pre" = "Under 49", "post" = "\u2265 49")) +
     scale_fill_manual(values = c("pre" = "#F8766D", "post" = "#00BFC4"),
-                      labels = c("pre" = "Under 49", "post" = "49 +")) +
+                      labels = c("pre" = "Under 49", "post" = "\u2265 49")) +
     theme(text = element_text(face = "bold"),
           axis.title.y = element_text(margin = margin(r=5), size = 14),
           axis.title.x = element_text(margin = margin(t=10), size = 14),
@@ -1494,15 +1672,13 @@ plot_meno <- function(df, facet = FALSE) {
 }
 
 plot_meno(all_pred %>% filter(racegrp == "All"))
-ggsave("../results/pre_vs_post_cohort_effects.pdf", width = 8, height = 6)
+ggsave("../results/pre_vs_post_cohort_effects.pdf", width = 8, height = 6, device = cairo_pdf)
 dev.off()
 
-## F tests
-for (r in names(meno_fits)) {
-  print(r)
-  print(anova(meno_fits[[r]]$no_meno, meno_fits[[r]]$with_meno, test = "F"))
-}
-
+anova(meno_fits$All$no_meno, meno_fits$All$with_meno, test = "F")
+anova(meno_fits$CN$no_meno, meno_fits$CN$with_meno, test = "F") 
+anova(meno_fits$IN$no_meno, meno_fits$IN$with_meno, test = "F") 
+anova(meno_fits$MY$no_meno, meno_fits$MY$with_meno, test = "F")  
 
 ## -----------------------------------------------------------------------------
 ## 12. EXPLAIN DF DIFFERENCES BETWEEN CANCERS
